@@ -1,0 +1,6 @@
+set(examples test1)
+foreach (example ${examples})
+    add_executable(${example} ${example}.cpp)
+    add_dependencies(${example} ${PROJECT_NAME})
+    target_link_libraries(${example} ${PROJECT_NAME})
+endforeach ()
