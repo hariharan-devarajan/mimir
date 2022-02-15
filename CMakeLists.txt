@@ -29,15 +29,19 @@ set(MIMIR_LIBRARY_SRC include/mimir/mimir.h
         include/mimir/constant.h
         include/mimir/mimir.h
         include/mimir/typedef.h
-        src/mimir/api/posix.cpp
-        src/mimir/core/advice.h
-        src/mimir/core/advice.cpp
         src/mimir/log/logger.h
-        src/mimir/log/logger.cpp
-        src/mimir/core/advice_handler.h
-        src/mimir/core/advice_handler.cpp)
+        src/mimir/log/logger.cpp)
 
 add_library(${PROJECT_NAME} SHARED ${MIMIR_LIBRARY_SRC})
+
+set(ATHENA_LIBRARY_SRC src/athena/mimir_adapter/api/posix.cpp
+        src/athena/mimir_adapter/advice/advice_handler.h
+        src/athena/mimir_adapter/advice/advice_handler.cpp include/athena/api/posix.h)
+
+add_library(athena SHARED ${ATHENA_LIBRARY_SRC})
+target_link_libraries(athena ${PROJECT_NAME})
+target_compile_definitions(athena PUBLIC ATHENA_PRELOAD)
+
 
 set_target_properties(${PROJECT_NAME} PROPERTIES
         VERSION ${PROJECT_VERSION}

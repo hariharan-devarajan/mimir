@@ -8,11 +8,14 @@
 #include <memory>
 #include <unordered_map>
 #include <mimir/common/data_structure.h>
+#include <mimir/constant.h>
+#include <mimir/typedef.h>
 
 namespace mimir {
     class AdviceHandler {
     private:
         static std::shared_ptr<AdviceHandler> instance;
+        std::unordered_map<MimirKey, std::vector<MimirHandler>> handler_map;
     public:
         static std::shared_ptr<AdviceHandler> Instance() {
             if (instance == nullptr) {
@@ -21,7 +24,8 @@ namespace mimir {
             return instance;
         }
         AdviceHandler(): handler_map(){}
-        std::unordered_map<MimirKey, std::vector<MimirHandler>> handler_map;
+        MimirStatus save_advice(MimirKey &key, PosixMimirHandler &handler);
+        MimirStatus remove_advice(MimirKey &key);
     };
 }
 

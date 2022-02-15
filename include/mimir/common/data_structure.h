@@ -59,32 +59,13 @@ namespace mimir {
         float _16mb;
     };
     struct MimirKey {
-        MimirKey(){}
-        MimirKey(const MimirKey& key) {}
-        MimirKey(const MimirKey&& key){}
+        size_t _id;
+        MimirKey():_id(){}
+        MimirKey(const MimirKey& key):_id(key._id) {}
+        MimirKey(const MimirKey&& key):_id(key._id) {}
 
         bool operator==(const MimirKey& other) const {
-            return true;
-        }
-    };
-
-    struct POSIXMimirKey: public MimirKey {
-        int _fd;
-        POSIXMimirKey():MimirKey(), _fd(-1){}
-        POSIXMimirKey(const POSIXMimirKey& key):MimirKey(key), _fd(key._fd) {}
-        POSIXMimirKey(const POSIXMimirKey&& key):MimirKey(key), _fd(key._fd){}
-        bool operator==(const POSIXMimirKey& l) {
-            return _fd == l._fd;
-        }
-    };
-
-    struct STDIOMimirKey: public MimirKey {
-        FILE* _fh;
-        STDIOMimirKey():MimirKey(), _fh(NULL){}
-        STDIOMimirKey(const STDIOMimirKey& key):MimirKey(key), _fh(key._fh) {}
-        STDIOMimirKey(const STDIOMimirKey&& key):MimirKey(key), _fh(key._fh){}
-        bool operator==(const STDIOMimirKey& l) {
-            return _fh == l._fh;
+            return _id == other._id;
         }
     };
 
@@ -95,6 +76,16 @@ namespace mimir {
         MimirHandler(): _type(PrimaryAdviceType::ADVICE_NONE, OperationAdviceType::NO_OP),
                         _payload(), _index() {}
     };
+
+    struct PosixMimirHandler : public MimirHandler{
+        std::string _filename;
+        size_t _offset;
+        size_t _size;
+        int _fd;
+        PosixMimirHandler(): MimirHandler(), _filename(), _offset(),
+                             _size(), _fd() {}
+    };
+
 }
 namespace std {
     template<>
@@ -109,7 +100,7 @@ namespace std {
     template<>
     struct hash<mimir::MimirKey> {
         size_t operator()(const mimir::MimirKey &k) const {
-            return 0;
+            return k._id;
         }
     };
 }
