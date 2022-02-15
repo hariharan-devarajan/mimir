@@ -4,6 +4,10 @@
 
 #ifndef MIMIR_APPLICATION_ADVICE_H
 #define MIMIR_APPLICATION_ADVICE_H
+
+#include <mimir/advice/advice_type.h>
+#include <mimir/advice/workflow_advice.h>
+
 namespace mimir {
     class ApplicationAdvice : public WorkflowAdvice {
     public:
@@ -24,7 +28,8 @@ namespace mimir {
 
         RankFileDAG _rank_file_dag;
 
-        ApplicationAdvice() : WorkflowAdvice(PrimaryAdviceType::JOB_WORKFLOW), _rank_file_dag() {}
-    }
+        ApplicationAdvice() : WorkflowAdvice(AdviceType(PrimaryAdviceType::JOB_WORKFLOW,
+                                                        OperationAdviceType::NO_OP)), _rank_file_dag() {}
+    };
 } //mimir
 #endif //MIMIR_APPLICATION_ADVICE_H

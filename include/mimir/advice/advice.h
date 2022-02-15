@@ -6,18 +6,16 @@
 #define MIMIR_ADVICE_H
 
 #include <mimir/common/typedef.h>
+#include <memory>
 
 namespace mimir {
     class Advice {
-    private:
-        PrimaryAdviceType _type;
-    protected:
-        Advice(PrimaryAdviceType type) : _type(type) {}
-
     public:
-        virtual std::pair<ReturnType, int> encode() = 0;
+        AdviceType _type;
+        Advice(AdviceType type) : _type(type) {}
 
-        virtual ReturnType decode(int &hash_value) = 0;
     };
+
+    typedef std::shared_ptr<Advice> MimirPayload;
 } // namespace mimir
 #endif //MIMIR_ADVICE_H

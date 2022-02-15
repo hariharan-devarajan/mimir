@@ -4,14 +4,38 @@ project(mimir VERSION 1.0.0 DESCRIPTION "Mimir: Extending POSIX interface for ex
 set(CMAKE_CXX_STANDARD 17)
 
 include(GNUInstallDirs)
-include_directories(src/mimir)
 include_directories(src)
 include_directories(include)
 
 set(MIMIR_LIBRARY_SRC include/mimir/mimir.h
         include/mimir/advice/advice.h
         include/mimir/advice/advice_type.h
-        include/mimir/common/typedef.h)
+        include/mimir/advice/application_advice.h
+        include/mimir/advice/dataset_advice.h
+        include/mimir/advice/execution_engine_advice.h
+        include/mimir/advice/file_advice.h
+        include/mimir/advice/hlio_advice.h
+        include/mimir/advice/io_phase_advice.h
+        include/mimir/advice/job_configuration_advice.h
+        include/mimir/advice/node_local_advice.h
+        include/mimir/advice/sample_advice.h
+        include/mimir/advice/shared_storage_advice.h
+        include/mimir/advice/workflow_advice.h
+        include/mimir/api/posix.h
+        include/mimir/common/data_structure.h
+        include/mimir/common/enumeration.h
+        include/mimir/common/typedef.h
+        include/mimir/common.h
+        include/mimir/constant.h
+        include/mimir/mimir.h
+        include/mimir/typedef.h
+        src/mimir/api/posix.cpp
+        src/mimir/core/advice.h
+        src/mimir/core/advice.cpp
+        src/mimir/log/logger.h
+        src/mimir/log/logger.cpp
+        src/mimir/core/advice_handler.h
+        src/mimir/core/advice_handler.cpp)
 
 add_library(${PROJECT_NAME} SHARED ${MIMIR_LIBRARY_SRC})
 

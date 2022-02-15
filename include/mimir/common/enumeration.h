@@ -21,13 +21,13 @@ namespace mimir {
         METADATA = 1
     };
     enum DataRepresentation {
-        BINARY = 0,
-        ND_ARRAY = 1,
-        IMAGE = 2
+        DATA_BINARY = 0,
+        DATA_ND_ARRAY = 1,
+        DATA_IMAGE = 2
     };
     enum Format {
-        BINARY = 0,
-        HDF5 = 1
+        FORMAT_BINARY = 0,
+        FORMAT_HDF5 = 1
     };
 } // mimir
 #endif //MIMIR_ENUMERATION_H
