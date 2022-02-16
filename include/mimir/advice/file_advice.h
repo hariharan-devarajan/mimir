@@ -47,6 +47,16 @@ public:
     bool operator>(const FileAdvice& other) const {
         return !(*this < other);
     }
+    bool operator==(const FileAdvice& other) const {
+        return Advice::operator==(other) &&
+        _format == other._format &&
+        _size_mb == other._size_mb &&
+        _name == other._name &&
+        _read_distribution == other._read_distribution  &&
+        _write_distribution == other._write_distribution  &&
+        _per_io_data == other._per_io_data  &&
+        _per_io_metadata == other._per_io_metadata;
+    }
 };
 }
 

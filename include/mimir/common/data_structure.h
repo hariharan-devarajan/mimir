@@ -57,6 +57,13 @@ namespace mimir {
         float _64kb_1mb;
         float _1mb_16mb;
         float _16mb;
+        bool operator==(const TransferSizeDistribution& other) const {
+            return _0_4kb == other._0_4kb &&
+                    _4_64kb == other._4_64kb &&
+                    _64kb_1mb == other._64kb_1mb &&
+                    _1mb_16mb == other._1mb_16mb  &&
+                    _16mb == other._16mb;
+        }
     };
     struct MimirKey {
         size_t _id;

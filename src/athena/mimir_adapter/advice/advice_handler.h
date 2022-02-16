@@ -20,9 +20,14 @@ namespace mimir {
     class AdviceHandler {
     protected:
         static std::unordered_map<AdviceType, std::shared_ptr<AdviceHandler<ADVICE>>> instance_map;
+
         std::unordered_map<MimirKey, std::set<ADVICE, std::greater<ADVICE>>> _advice;
+
+        std::unordered_map<ADVICE, std::unordered_set<ADVICE>> _conflicts;
     public:
-        AdviceHandler(): conflicts(), _advice() {}
+
+        AdviceHandler(): _conflicts(), _advice() {}
+
         static std::shared_ptr<AdviceHandler<ADVICE>> Instance(AdviceType type) {
             auto iter = instance_map.find(type);
             if (iter != instance_map.end()) {
@@ -33,24 +38,25 @@ namespace mimir {
                 return instance;
             }
         }
-        MimirStatus resolve_conflicts(MimirKey &key) {
+
+        std::set<ADVICE, std::greater<ADVICE>> resolve_conflicts(MimirKey &key) {
             auto added_handlers = std::set<ADVICE, std::greater<ADVICE>>();
             auto iter = _advice.find(key);
             if (iter != _advice.end()) {
-                for (const auto & handler:iter->second) {
-                    auto conflict_iter = conflicts.find(handler);
+                for (const auto & advice:iter->second) {
+                    auto conflict_iter = _conflicts.find(advice);
                     bool found_conflict = false;
-                    if (conflict_iter != conflicts.end()) {
+                    if (conflict_iter != _conflicts.end()) {
                         for (const auto & added_handler: added_handlers) {
-                            auto conflicted_handler_iter = conflict_iter->second.find(added_handlers);
-                            if (conflicted_handler_iter != conflict_iter->second.end()) {
+                            auto conflict_val_iter = conflict_iter->second.find(added_handler);
+                            if (conflict_val_iter != conflict_iter->second.end()) {
                                 found_conflict = true;
                                 break;
                             }
                         }
                     }
                     if (!found_conflict) {
-                        added_handlers.emplace(handler);
+                        added_handlers.emplace(advice);
                     }
                 }
             }
@@ -87,8 +93,13 @@ namespace mimir {
             return std::pair<bool, std::set<ADVICE, std::greater<ADVICE>>>(true, iter->second);
         }
 
+        MimirStatus add_conflicts(ADVICE &advice) {
+            _conflicts.emplace(advice);
+            return MIMIR_SUCCESS;
+        }
+
+
     protected:
-        std::unordered_map<ADVICE, std::unordered_set<ADVICE>> conflicts;
 
         //virtual MimirStatus load_conflicts() = 0;
         /**
