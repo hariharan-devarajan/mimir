@@ -22,6 +22,35 @@ namespace mimir {
                           _shared_files(), _io_size_mb(), _per_io_data(), _per_io_metadata(),
                           _ts_distribution(), _interfaces_used(), _file_access_pattern(),
                           _runtime_minutes() {}
+        IOPhaseAdvice(const IOPhaseAdvice& other): Advice(other), _independent_files(other._independent_files),
+                                                   _shared_files(other._shared_files), _io_size_mb(other._io_size_mb),
+                                                   _per_io_data(other._per_io_data), _per_io_metadata(other._per_io_metadata),
+                                                   _ts_distribution(other._ts_distribution), _interfaces_used(other._interfaces_used),
+                                                   _file_access_pattern(other._file_access_pattern), _runtime_minutes(other._runtime_minutes) {}
+        IOPhaseAdvice(const IOPhaseAdvice&& other): Advice(other), _independent_files(other._independent_files),
+                                                    _shared_files(other._shared_files), _io_size_mb(other._io_size_mb),
+                                                    _per_io_data(other._per_io_data), _per_io_metadata(other._per_io_metadata),
+                                                    _ts_distribution(other._ts_distribution), _interfaces_used(other._interfaces_used),
+                                                    _file_access_pattern(other._file_access_pattern), _runtime_minutes(other._runtime_minutes) {}
+        IOPhaseAdvice& operator=(const IOPhaseAdvice& other) {
+            Advice::operator=(other);
+            _independent_files = other._independent_files;
+            _shared_files = other._shared_files;
+            _io_size_mb = other._io_size_mb;
+            _per_io_data = other._per_io_data;
+            _per_io_metadata = other._per_io_metadata;
+            _ts_distribution = other._ts_distribution;
+            _interfaces_used = other._interfaces_used;
+            _file_access_pattern = other._file_access_pattern;
+            _runtime_minutes = other._runtime_minutes;
+            return *this;
+        }
+        bool operator<(const IOPhaseAdvice& other) const {
+            return Advice::operator<(other);
+        }
+        bool operator>(const IOPhaseAdvice& other) const {
+            return !(*this < other);
+        }
     };
 } //mimir
 #endif //MIMIR_IO_PHASE_ADVICE_H

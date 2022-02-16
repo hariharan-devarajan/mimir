@@ -17,9 +17,7 @@ set(MIMIR_LIBRARY_SRC include/mimir/mimir.h
         include/mimir/advice/hlio_advice.h
         include/mimir/advice/io_phase_advice.h
         include/mimir/advice/job_configuration_advice.h
-        include/mimir/advice/node_local_advice.h
         include/mimir/advice/sample_advice.h
-        include/mimir/advice/shared_storage_advice.h
         include/mimir/advice/workflow_advice.h
         include/mimir/api/posix.h
         include/mimir/common/data_structure.h
@@ -30,13 +28,13 @@ set(MIMIR_LIBRARY_SRC include/mimir/mimir.h
         include/mimir/mimir.h
         include/mimir/typedef.h
         src/mimir/log/logger.h
-        src/mimir/log/logger.cpp)
+        src/mimir/log/logger.cpp include/mimir/common/error_code.h include/mimir/advice/middleware_advice.h include/mimir/advice/file_operation_advice.h include/mimir/advice/posix_file_operation_advice.h)
 
 add_library(${PROJECT_NAME} SHARED ${MIMIR_LIBRARY_SRC})
 
 set(ATHENA_LIBRARY_SRC src/athena/mimir_adapter/api/posix.cpp
         src/athena/mimir_adapter/advice/advice_handler.h
-        src/athena/mimir_adapter/advice/advice_handler.cpp include/athena/api/posix.h)
+        include/athena/api/posix.h)
 
 add_library(athena SHARED ${ATHENA_LIBRARY_SRC})
 target_link_libraries(athena ${PROJECT_NAME})

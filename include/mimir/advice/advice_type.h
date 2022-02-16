@@ -48,10 +48,22 @@ namespace mimir {
             _primary = primary;
             _secondary = secondary;
         }
+        bool operator==(const AdviceType& other) const {
+            return _primary == other._primary && _secondary == other._secondary;
+        }
     } AdviceType;
 
 }
 
-
+namespace std {
+    template<>
+    struct hash<mimir::AdviceType> {
+        size_t operator()(const mimir::AdviceType &k) const {
+            size_t hash_val = hash<uint16_t>()(k._primary);
+            hash_val ^= hash<uint16_t>()(k._secondary);
+            return hash_val;
+        }
+    };
+}
 
 #endif //MIMIR_ADVICE_TYPE_H

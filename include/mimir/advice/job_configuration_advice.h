@@ -25,6 +25,29 @@ namespace mimir {
                                    _num_gpus_per_node(0), _devices(),
                                    _job_time_minutes(30) {}
 
+        JobConfigurationAdvice(const JobConfigurationAdvice& other): Advice(other), _num_nodes(other._num_nodes),
+                                                                     _num_cores_per_node(other._num_cores_per_node),
+                                                                     _num_gpus_per_node(other._num_gpus_per_node),
+                                                                     _devices(other._devices), _job_time_minutes(other._job_time_minutes) {}
+        JobConfigurationAdvice(const JobConfigurationAdvice&& other): Advice(other),  _num_nodes(other._num_nodes),
+                                                                      _num_cores_per_node(other._num_cores_per_node),
+                                                                      _num_gpus_per_node(other._num_gpus_per_node),
+                                                                      _devices(other._devices), _job_time_minutes(other._job_time_minutes) {}
+        JobConfigurationAdvice& operator=(const JobConfigurationAdvice& other) {
+            Advice::operator=(other);
+            _num_nodes = other._num_nodes;
+            _num_cores_per_node = other._num_cores_per_node;
+            _num_gpus_per_node = other._num_gpus_per_node;
+            _devices = other._devices;
+            _job_time_minutes = other._job_time_minutes;
+            return *this;
+        }
+        bool operator<(const JobConfigurationAdvice& other) const {
+            return Advice::operator<(other);
+        }
+        bool operator>(const JobConfigurationAdvice& other) const {
+            return !(*this < other);
+        }
     };
 }
 #endif //MIMIR_JOB_CONFIGURATION_ADVICE_H

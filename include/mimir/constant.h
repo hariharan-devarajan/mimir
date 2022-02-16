@@ -8,6 +8,5 @@
 #include "typedef.h"
 
 namespace mimir {
-    const MimirStatus MIMIR_SUCCESS = 0;
 }
 #endif //MIMIR_CONSTANT_H

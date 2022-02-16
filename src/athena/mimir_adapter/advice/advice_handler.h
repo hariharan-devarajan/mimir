@@ -10,23 +10,98 @@
 #include <mimir/common/data_structure.h>
 #include <mimir/constant.h>
 #include <mimir/typedef.h>
+#include <unordered_set>
+#include <set>
+#include <mimir/common/error_code.h>
+#include <mimir/advice/middleware_advice.h>
 
 namespace mimir {
+    template <typename ADVICE>
     class AdviceHandler {
-    private:
-        static std::shared_ptr<AdviceHandler> instance;
-        std::unordered_map<MimirKey, std::vector<MimirHandler>> handler_map;
+    protected:
+        static std::unordered_map<AdviceType, std::shared_ptr<AdviceHandler<ADVICE>>> instance_map;
+        std::unordered_map<MimirKey, std::set<ADVICE, std::greater<ADVICE>>> _advice;
     public:
-        static std::shared_ptr<AdviceHandler> Instance() {
-            if (instance == nullptr) {
-                instance = std::make_shared<AdviceHandler>();
+        AdviceHandler(): conflicts(), _advice() {}
+        static std::shared_ptr<AdviceHandler<ADVICE>> Instance(AdviceType type) {
+            auto iter = instance_map.find(type);
+            if (iter != instance_map.end()) {
+                return iter->second;
+            } else {
+                auto instance = std::make_shared<AdviceHandler<ADVICE>>();
+                instance_map.emplace(type, instance);
+                return instance;
             }
-            return instance;
         }
-        AdviceHandler(): handler_map(){}
-        MimirStatus save_advice(MimirKey &key, PosixMimirHandler &handler);
-        MimirStatus remove_advice(MimirKey &key);
+        MimirStatus resolve_conflicts(MimirKey &key) {
+            auto added_handlers = std::set<ADVICE, std::greater<ADVICE>>();
+            auto iter = _advice.find(key);
+            if (iter != _advice.end()) {
+                for (const auto & handler:iter->second) {
+                    auto conflict_iter = conflicts.find(handler);
+                    bool found_conflict = false;
+                    if (conflict_iter != conflicts.end()) {
+                        for (const auto & added_handler: added_handlers) {
+                            auto conflicted_handler_iter = conflict_iter->second.find(added_handlers);
+                            if (conflicted_handler_iter != conflict_iter->second.end()) {
+                                found_conflict = true;
+                                break;
+                            }
+                        }
+                    }
+                    if (!found_conflict) {
+                        added_handlers.emplace(handler);
+                    }
+                }
+            }
+            return added_handlers;
+        }
+
+        MimirStatus save_advice(MimirKey &key, ADVICE advice) {
+            auto iter = _advice.find(key);
+            std::set<ADVICE, std::greater<ADVICE>> val;
+            if (iter == _advice.end()) {
+                val = std::set<ADVICE, std::greater<ADVICE>>();
+            } else {
+                val = iter->second;
+                _advice.erase(iter);
+            }
+            val.emplace(advice);
+            return MIMIR_SUCCESS;
+        }
+
+        MimirStatus remove_advice(MimirKey &key) {
+            auto iter = _advice.erase(key);
+            return MIMIR_SUCCESS;
+        }
+
+        MimirStatus is_advice_present(MimirKey &key) {
+            return _advice.find(key) != _advice.end();
+        }
+
+        MimirStatus find_advice(MimirKey &key) {
+            auto iter = _advice.find(key);
+            if (iter == _advice.end()) {
+                return std::make_pair(false, std::set<ADVICE, std::greater<ADVICE>>());
+            }
+            return std::pair<bool, std::set<ADVICE, std::greater<ADVICE>>>(true, iter->second);
+        }
+
+    protected:
+        std::unordered_map<ADVICE, std::unordered_set<ADVICE>> conflicts;
+
+        //virtual MimirStatus load_conflicts() = 0;
+        /**
+         * apply advice
+         **/
+        MimirStatus apply_advice(MimirKey &key, MimirHandler &handler) {
+
+        }
+
     };
+    template <typename ADVICE>
+    std::unordered_map<AdviceType, std::shared_ptr<AdviceHandler<ADVICE>>> AdviceHandler<ADVICE>::instance_map =
+            std::unordered_map<AdviceType, std::shared_ptr<AdviceHandler<ADVICE>>>();
 }
 
 

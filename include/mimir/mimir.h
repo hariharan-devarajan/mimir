@@ -13,9 +13,8 @@
 #include <mimir/advice/hlio_advice.h>
 #include <mimir/advice/io_phase_advice.h>
 #include <mimir/advice/job_configuration_advice.h>
-#include <mimir/advice/node_local_advice.h>
+#include <mimir/advice/file_operation_advice.h>
 #include <mimir/advice/sample_advice.h>
-#include <mimir/advice/shared_storage_advice.h>
 #include <mimir/advice/workflow_advice.h>
 
 

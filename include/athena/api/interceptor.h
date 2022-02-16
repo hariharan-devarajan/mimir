@@ -10,12 +10,14 @@
      * Declare the function signatures for real functions
      * i.e. The real function point to fwrite would be defined as __athena_fwrite
      */
-    #define ATHENA_FORWARD_DECL(name, ret, args) ret(*__mimir_##name) args;
+    #define ATHENA_FORWARD_DECL(name, ret, args) \
+    typedef ret(*__athena_##name##_t) args;      \
+    ret(*__athena_##name) args = NULL;
 
     /* Point __athena_func to the real funciton using dlsym() */
     #define MAP_OR_FAIL(func)                                                   \
         if (!(__athena_##func)) {                                                 \
-            __athena_##func = dlsym(RTLD_NEXT, #func);                            \
+            __athena_##func = (__athena_##func##_t)dlsym(RTLD_NEXT, #func);                            \
             if (!(__athena_##func)) {                                             \
                 printf("Athena failed to map symbol: %s\n", #func);           \
             }                                                                   \

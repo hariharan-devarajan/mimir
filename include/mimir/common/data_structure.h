@@ -70,20 +70,24 @@ namespace mimir {
     };
 
     struct MimirHandler {
+    public:
+        size_t _id;
         AdviceType _type;
-        std::shared_ptr<Advice> _payload;
-        uint32_t _index;
         MimirHandler(): _type(PrimaryAdviceType::ADVICE_NONE, OperationAdviceType::NO_OP),
-                        _payload(), _index() {}
-    };
-
-    struct PosixMimirHandler : public MimirHandler{
-        std::string _filename;
-        size_t _offset;
-        size_t _size;
-        int _fd;
-        PosixMimirHandler(): MimirHandler(), _filename(), _offset(),
-                             _size(), _fd() {}
+                        _id() {
+        }
+        MimirHandler(const MimirHandler& other):_type(other._type),
+                                                _id(other._id) {}
+        MimirHandler(const MimirHandler&& other):_type(other._type),
+                                                 _id(other._id) {}
+        bool operator==(const MimirHandler& other) const {
+            return _type == other._type && _id == other._id;
+        }
+        MimirHandler& operator=(const MimirHandler& other) {
+            _type = other._type;
+            _id = other._id;
+            return *this;
+        }
     };
 
 }
@@ -97,11 +101,15 @@ namespace std {
             return hash_val;
         }
     };
+
+
+
     template<>
     struct hash<mimir::MimirKey> {
         size_t operator()(const mimir::MimirKey &k) const {
             return k._id;
         }
     };
+
 }
 #endif //MIMIR_DATA_STRUCTURE_H

@@ -10,14 +10,13 @@
 #include <mimir/common/data_structure.h>
 #include <mimir/advice/advice_type.h>
 #include <mimir/mimir.h>
+#include <mimir/advice/posix_file_operation_advice.h>
 
 namespace mimir {
-    int file_advice_begin(const char *path, AdviceType advice, MimirPayload payload,
-                          PosixMimirHandler &handler);
-    int operation_advice_begin(int fd, uint32_t offset, uint32_t size, AdviceType advice,
-                               MimirPayload payload, PosixMimirHandler &handler);
-    int operation_advice_end(PosixMimirHandler &handler);
-    int file_advice_end(PosixMimirHandler &handler);
+    int file_advice_begin(FileAdvice &payload, MimirHandler &handler);
+    int operation_advice_begin(POSIXFileOperationAdvice &payload, MimirHandler &handler);
+    int operation_advice_end(MimirHandler &handler);
+    int file_advice_end(MimirHandler &handler);
 }
 
 

@@ -12,6 +12,15 @@ namespace mimir {
     public:
         NoAdvice() : Advice(AdviceType(PrimaryAdviceType::ADVICE_NONE,
                                        OperationAdviceType::NO_OP)) {}
+        NoAdvice(const NoAdvice& other): Advice(other) {}
+        NoAdvice(const NoAdvice&& other): Advice(other) {}
+
+        bool operator<(const NoAdvice& other) const {
+            return Advice::operator<(other);
+        }
+        bool operator>(const NoAdvice& other) const {
+            return !(*this < other);
+        }
     };
     const std::shared_ptr<mimir::NoAdvice> NO_ADVICE;
 } // namespace mimir
