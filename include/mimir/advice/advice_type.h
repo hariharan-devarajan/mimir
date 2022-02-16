@@ -6,6 +6,7 @@
 #define MIMIR_ADVICE_TYPE_H
 
 #include <stdint-gcc.h>
+#include <functional>
 
 namespace mimir {
     enum PrimaryAdviceType: uint16_t {

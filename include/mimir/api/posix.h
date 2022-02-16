@@ -13,10 +13,10 @@
 #include <mimir/advice/posix_file_operation_advice.h>
 
 namespace mimir {
-    int file_advice_begin(FileAdvice &payload, MimirHandler &handler);
-    int operation_advice_begin(POSIXFileOperationAdvice &payload, MimirHandler &handler);
-    int operation_advice_end(MimirHandler &handler);
-    int file_advice_end(MimirHandler &handler);
+    MimirStatus file_advice_begin(FileAdvice &payload, MimirHandler &handler);
+    MimirStatus operation_advice_begin(POSIXFileOperationAdvice &payload, MimirHandler &handler);
+    MimirStatus operation_advice_end(MimirHandler &handler);
+    MimirStatus file_advice_end(MimirHandler &handler);
 }
 
 

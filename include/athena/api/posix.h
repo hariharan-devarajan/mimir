@@ -4,7 +4,11 @@
 
 #ifndef ATHENA_POSIX_H
 #define ATHENA_POSIX_H
+
+#include <unistd.h>
 #include <athena/api/interceptor.h>
+#include <mimir/api/posix.h>
+
 ATHENA_FORWARD_DECL(open64, int, (const char *path, int flags, ...));
 ATHENA_FORWARD_DECL(open, int, (const char *path, int flags, ...));
 ATHENA_FORWARD_DECL(close, int, (int fd));

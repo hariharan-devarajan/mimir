@@ -98,17 +98,6 @@ namespace mimir {
             return MIMIR_SUCCESS;
         }
 
-
-    protected:
-
-        //virtual MimirStatus load_conflicts() = 0;
-        /**
-         * apply advice
-         **/
-        MimirStatus apply_advice(MimirKey &key, MimirHandler &handler) {
-
-        }
-
     };
     template <typename ADVICE>
     std::unordered_map<AdviceType, std::shared_ptr<AdviceHandler<ADVICE>>> AdviceHandler<ADVICE>::instance_map =

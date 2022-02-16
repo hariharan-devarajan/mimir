@@ -5,6 +5,7 @@
 #ifndef ATHENA_INTERCEPTOR_H
 #define ATHENA_INTERCEPTOR_H
 #ifdef ATHENA_PRELOAD
+#include <cstddef>
 #include <dlfcn.h>
     /*
      * Declare the function signatures for real functions

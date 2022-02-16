@@ -5,6 +5,7 @@
 #ifndef MIMIR_MIDDLEWARE_ADVICE_H
 #define MIMIR_MIDDLEWARE_ADVICE_H
 
+#include <mimir/common/enumeration.h>
 #include "advice_type.h"
 
 namespace mimir {

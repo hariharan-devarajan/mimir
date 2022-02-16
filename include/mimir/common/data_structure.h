@@ -7,16 +7,24 @@
 
 #include <stdint-gcc.h>
 #include <string>
+#include <utility>
 #include <vector>
 #include <mimir/advice/advice_type.h>
 #include <mimir/advice/advice.h>
 #include <memory>
 #include "typedef.h"
+#include <assert.h>
 
 namespace mimir {
     struct Storage {
-        uint8_t _index;
         std::string _mount_point;
+        uint32_t _capacity_mb;
+        Storage():_mount_point(), _capacity_mb(0) {}
+        Storage(std::string mount_point, uint32_t capacity_mb):
+                                _mount_point(std::move(mount_point)), _capacity_mb(capacity_mb) {}
+        bool operator==(const Storage& other) const {
+            return _mount_point == other._mount_point && _capacity_mb == other._capacity_mb;
+        }
     };
 
     struct Node {
@@ -57,6 +65,12 @@ namespace mimir {
         float _64kb_1mb;
         float _1mb_16mb;
         float _16mb;
+        TransferSizeDistribution(float ts_0_4kb, float ts_4_64kb, float ts_64kb_1mb, float ts_1mb_16mb, float ts_16mb):
+                                _0_4kb(ts_0_4kb), _4_64kb(ts_4_64kb), _64kb_1mb(ts_64kb_1mb), _1mb_16mb(ts_1mb_16mb), _16mb(ts_16mb) {
+            assert(ts_0_4kb + ts_4_64kb + ts_64kb_1mb + ts_1mb_16mb + ts_16mb <=1.0 &&
+                           ts_0_4kb + ts_4_64kb + ts_64kb_1mb + ts_1mb_16mb + ts_16mb >=0 );
+        }
+        TransferSizeDistribution(): TransferSizeDistribution(0.0,0.0,0.0,0.0,0.0){ }
         bool operator==(const TransferSizeDistribution& other) const {
             return _0_4kb == other._0_4kb &&
                     _4_64kb == other._4_64kb &&

@@ -6,6 +6,7 @@
 #define MIMIR_ADVICE_H
 
 #include <mimir/common/typedef.h>
+#include <mimir/advice/advice_type.h>
 #include <memory>
 
 namespace mimir {
@@ -49,7 +50,6 @@ namespace mimir {
         }
 
     };
-    uint32_t Advice::__index = 0;
 
     typedef std::shared_ptr<Advice> MimirPayload;
 } // namespace mimir
