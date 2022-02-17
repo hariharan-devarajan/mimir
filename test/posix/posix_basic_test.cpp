@@ -43,12 +43,12 @@ TEST_CASE("BatchedWriteSequential",
 
 #endif
     std::string new_file = info.new_file, existing_file = info.existing_file;
-    SECTION("write to existing file") {
+    SECTION("write to new file always at start") {
 #ifdef ATHENA_PRELOAD
         file_advice._name = info.new_file;
         file_advice_begin(file_advice, file_handler);
 #endif
-        test::test_open(info.new_file.c_str(), O_WRONLY | O_CREAT | O_EXCL, 0600);
+        test::test_open(info.new_file.c_str(), O_WRONLY | O_CREAT, 0600);
         REQUIRE(test::fh_orig != -1);
 
         for (size_t i = 0; i < info.num_iterations; ++i) {
@@ -64,7 +64,7 @@ TEST_CASE("BatchedWriteSequential",
         REQUIRE(fs::file_size(new_file) == args.request_size);
     }
 
-    SECTION("write to new file always at start") {
+    SECTION("write to new file") {
 
 #ifdef ATHENA_PRELOAD
         file_advice._name = info.new_file;
