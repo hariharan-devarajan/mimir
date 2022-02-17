@@ -70,7 +70,7 @@ TEST_CASE("BatchedWriteSequential",
         file_advice._name = info.new_file;
         file_advice_begin(file_advice, file_handler);
 #endif
-        test::test_open(info.new_file.c_str(), O_WRONLY | O_CREAT | O_EXCL, 0600);
+        test::test_open(info.new_file.c_str(), O_WRONLY | O_CREAT, 0600);
         REQUIRE(test::fh_orig != -1);
 
         for (size_t i = 0; i < info.num_iterations; ++i) {
