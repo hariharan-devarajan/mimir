@@ -4,5 +4,4 @@
 
 #include <mimir/advice/advice.h>
 
-
 uint32_t mimir::Advice::__index = 0;

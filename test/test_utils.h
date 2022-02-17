@@ -10,26 +10,26 @@
 
 size_t GetRandomOffset(size_t i, unsigned int offset_seed, size_t stride,
                        size_t total_size) {
-    return abs((int)(((i * rand_r(&offset_seed)) % stride) % total_size));
+  return abs((int)(((i * rand_r(&offset_seed)) % stride) % total_size));
 }
 
 std::string GenRandom(const int len) {
-    std::string tmp_s;
-    static const char alphanum[] =
-            "0123456789"
-            "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-            "abcdefghijklmnopqrstuvwxyz";
+  std::string tmp_s;
+  static const char alphanum[] =
+      "0123456789"
+      "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+      "abcdefghijklmnopqrstuvwxyz";
 
-    srand(100);
+  srand(100);
 
-    tmp_s.reserve(len);
+  tmp_s.reserve(len);
 
-    for (int i = 0; i < len; ++i) {
-        tmp_s += alphanum[rand() % (sizeof(alphanum) - 1)];
-    }
+  for (int i = 0; i < len; ++i) {
+    tmp_s += alphanum[rand() % (sizeof(alphanum) - 1)];
+  }
 
-    tmp_s[len - 1] = '\n';
+  tmp_s[len - 1] = '\n';
 
-    return tmp_s;
+  return tmp_s;
 }
-#endif //MIMIR_TEST_UTILS_H
+#endif  // MIMIR_TEST_UTILS_H

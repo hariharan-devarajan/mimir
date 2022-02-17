@@ -7,6 +7,5 @@
 
 #include "typedef.h"
 
-namespace mimir {
-}
-#endif //MIMIR_CONSTANT_H
+namespace mimir {}
+#endif  // MIMIR_CONSTANT_H

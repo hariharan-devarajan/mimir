@@ -9,4 +9,4 @@ typedef int ReturnType;
 typedef int MimirAdviceType;
 typedef int MimirStatus;
 
-#endif //MIMIR_TYPEDEF_H
+#endif  // MIMIR_TYPEDEF_H

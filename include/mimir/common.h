@@ -7,4 +7,4 @@
 
 typedef int ReturnType;
 
-#endif //MIMIR_COMMON_H
+#endif  // MIMIR_COMMON_H
