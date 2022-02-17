@@ -19,9 +19,21 @@ namespace mimir {
     struct Storage {
         std::string _mount_point;
         uint32_t _capacity_mb;
-        Storage():_mount_point(), _capacity_mb(0) {}
+        uint32_t _used_capacity_mb;
+        Storage():_mount_point(), _capacity_mb(0), _used_capacity_mb(0) {}
+
         Storage(std::string mount_point, uint32_t capacity_mb):
-                                _mount_point(std::move(mount_point)), _capacity_mb(capacity_mb) {}
+                                _mount_point(std::move(mount_point)), _capacity_mb(capacity_mb), _used_capacity_mb(0) {}
+        Storage(const Storage& other): _mount_point(other._mount_point), _capacity_mb(other._capacity_mb),
+                                       _used_capacity_mb(other._used_capacity_mb) {}
+        Storage(const Storage&& other): _mount_point(other._mount_point), _capacity_mb(other._capacity_mb),
+                                        _used_capacity_mb(other._used_capacity_mb) {}
+        Storage& operator=(const Storage& other) {
+            _mount_point = other._mount_point;
+            _capacity_mb = other._capacity_mb;
+            _used_capacity_mb = other._used_capacity_mb;
+            return *this;
+        }
         bool operator==(const Storage& other) const {
             return _mount_point == other._mount_point && _capacity_mb == other._capacity_mb;
         }

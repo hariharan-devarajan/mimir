@@ -33,12 +33,16 @@ set(MIMIR_LIBRARY_SRC include/mimir/mimir.h
         include/mimir/common/error_code.h
         include/mimir/advice/middleware_advice.h
         include/mimir/advice/file_operation_advice.h
-        include/mimir/advice/posix_file_operation_advice.h src/mimir/api/job_configuration.cpp include/mimir/api/job_configuration.h src/mimir/advice/advice.cpp)
+        include/mimir/advice/posix_file_operation_advice.h
+        src/mimir/api/job_configuration.cpp
+        include/mimir/api/job_configuration.h
+        src/mimir/advice/advice.cpp
+        src/mimir/advice/advice_handler.h
+        )
 
 add_library(${PROJECT_NAME} SHARED ${MIMIR_LIBRARY_SRC})
 
 set(ATHENA_LIBRARY_SRC src/athena/mimir_adapter/api/posix.cpp
-        src/athena/mimir_adapter/advice/advice_handler.h
         include/athena/api/posix.h)
 
 add_library(athena SHARED ${ATHENA_LIBRARY_SRC})

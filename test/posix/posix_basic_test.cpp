@@ -2,183 +2,90 @@
 // Created by haridev on 2/16/22.
 //
 
-TEST_CASE("SingleWrite", "[process=" +
-std::to_string(info
-.comm_size) +
-"]"
-"[operation=single_write]"
-"[request_size=type-fixed][repetition=1]"
-"[file=1]") {
-pretest();
+TEST_CASE("BatchedWriteSequential",
+          "[process=" + std::to_string(info.comm_size) + "]"
+          "[operation=batched_write]"
+          "[request_size=type-fixed]"
+          "[repetition=" + std::to_string(info.num_iterations) + "]"
+          "[pattern=sequential][file=1]") {
+    pretest();
+#ifdef ATHENA_PRELOAD
+    using namespace  mimir;
+    MimirHandler job_configuration_handler;
+    JobConfigurationAdvice job_conf_advice;
+    job_conf_advice._job_id = 0;
+    job_conf_advice._devices.emplace_back(args.shm, 16);
+    job_conf_advice._devices.emplace_back(args.pfs, 128);
+    job_conf_advice._job_time_minutes = 30;
+    job_conf_advice._num_cores_per_node = 8;
+    job_conf_advice._num_gpus_per_node = 0;
+    job_conf_advice._num_nodes = 1;
+    job_conf_advice._priority = 100;
+    job_configuration_advice_begin(job_conf_advice, job_configuration_handler);
 
-SECTION("write to existing file") {
-test::test_open(info
-.existing_file.
+    MimirHandler file_handler;
+    FileAdvice file_advice;
+    file_advice._type._secondary = OperationAdviceType::INDEPENDENT_FILE;
+    file_advice._per_io_data = info.num_iterations/(info.num_iterations + 2);
+    file_advice._per_io_metadata = 2/(info.num_iterations + 2);
+    file_advice._size_mb = args.request_size * info.num_iterations;
+    file_advice._device = Storage("/home/haridev/pfs", 128);
 
-c_str(), O_RDWR
+    if (args.request_size >= 0 && args.request_size < 4 * KB) file_advice._write_distribution._0_4kb = 1.0;
+    else if (args.request_size >= 4 * KB && args.request_size < 64 * KB) file_advice._write_distribution._4_64kb = 1.0;
+    if (args.request_size >= 64 * KB && args.request_size < 1 * MB) file_advice._write_distribution._64kb_1mb = 1.0;
+    if (args.request_size >= 1 * MB && args.request_size < 16 * MB) file_advice._write_distribution._1mb_16mb = 1.0;
+    if (args.request_size >= 16 * MB) file_advice._write_distribution._16mb = 1.0;
 
-);
-REQUIRE(test::fh_orig
-!= -1);
-test::test_seek(0, SEEK_SET);
-REQUIRE(test::status_orig
-== 0);
-test::test_write(info
-.write_data.
+    file_advice._io_amount_mb = args.request_size * info.num_iterations;
+    file_advice._format = Format::FORMAT_BINARY;
+    file_advice._priority = 100;
 
-data(), args
+#endif
+    std::string new_file = info.new_file, existing_file = info.existing_file;
+    SECTION("write to existing file") {
+#ifdef ATHENA_PRELOAD
+        file_advice._name = info.new_file;
+        file_advice_begin(file_advice, file_handler);
+#endif
+        test::test_open(info.new_file.c_str(), O_WRONLY | O_CREAT | O_EXCL, 0600);
+        REQUIRE(test::fh_orig != -1);
 
-.request_size);
-REQUIRE(test::size_written_orig
-== args.request_size);
+        for (size_t i = 0; i < info.num_iterations; ++i) {
+            test::test_seek(0, SEEK_SET);
+            REQUIRE(test::status_orig == 0);
+            test::test_write(info.write_data.data(), args.request_size);
+            REQUIRE(test::size_written_orig == args.request_size);
+        }
+        new_file = GetFilenameFromFD(test::fh_orig);
+        printf("I/O performed on file %s\n", new_file.c_str());
+        test::test_close();
+        REQUIRE(test::status_orig == 0);
+        REQUIRE(fs::file_size(new_file) == args.request_size);
+    }
 
-test::test_close();
+    SECTION("write to new file always at start") {
 
-REQUIRE(test::status_orig
-== 0);
-}
+#ifdef ATHENA_PRELOAD
+        file_advice._name = info.new_file;
+        file_advice_begin(file_advice, file_handler);
+#endif
+        test::test_open(info.new_file.c_str(), O_WRONLY | O_CREAT | O_EXCL, 0600);
+        REQUIRE(test::fh_orig != -1);
 
-SECTION("write to new  file") {
-test::test_open(info
-.new_file.
+        for (size_t i = 0; i < info.num_iterations; ++i) {
+            test::test_write(info.write_data.data(), args.request_size);
+            REQUIRE(test::size_written_orig == args.request_size);
+        }
+        new_file = GetFilenameFromFD(test::fh_orig);
+        printf("I/O performed on file %s\n", new_file.c_str());
+        test::test_close();
+        REQUIRE(test::status_orig == 0);
+        REQUIRE(fs::file_size(new_file) == args.request_size * info.num_iterations);
+    }
 
-c_str(), O_WRONLY
-
-| O_CREAT | O_EXCL, 0600);
-REQUIRE(test::fh_orig
-!= -1);
-test::test_write(info
-.write_data.
-
-data(), args
-
-.request_size);
-REQUIRE(test::size_written_orig
-== args.request_size);
-
-test::test_close();
-
-REQUIRE(test::status_orig
-== 0);
-REQUIRE(fs::file_size(info.new_file)
-== test::size_written_orig);
-}
-
-SECTION("write to existing file with truncate") {
-test::test_open(info
-.existing_file.
-
-c_str(), O_WRONLY
-
-| O_TRUNC);
-REQUIRE(test::fh_orig
-!= -1);
-test::test_write(info
-.write_data.
-
-data(), args
-
-.request_size);
-REQUIRE(test::size_written_orig
-== args.request_size);
-
-test::test_close();
-
-REQUIRE(test::status_orig
-== 0);
-REQUIRE(fs::file_size(info.existing_file)
-== test::size_written_orig);
-}
-
-SECTION("write to existing file at the end") {
-test::test_open(info
-.existing_file.
-
-c_str(), O_RDWR
-
-);
-REQUIRE(test::fh_orig
-!= -1);
-test::test_seek(0, SEEK_END);
-REQUIRE(((size_t)
-test::status_orig) ==
-args.
-request_size *info
-.num_iterations);
-test::test_write(info
-.write_data.
-
-data(), args
-
-.request_size);
-REQUIRE(test::size_written_orig
-== args.request_size);
-
-test::test_close();
-
-REQUIRE(test::status_orig
-== 0);
-REQUIRE(fs::file_size(info.existing_file)
-==
-test::size_written_orig + args.
-request_size *info
-.num_iterations);
-}
-
-SECTION("append to existing file") {
-auto existing_size = fs::file_size(info.existing_file);
-test::test_open(info
-.existing_file.
-
-c_str(), O_RDWR
-
-| O_APPEND);
-REQUIRE(test::fh_orig
-!= -1);
-test::test_write(info
-.write_data.
-
-data(), args
-
-.request_size);
-REQUIRE(test::size_written_orig
-== args.request_size);
-
-test::test_close();
-
-REQUIRE(test::status_orig
-== 0);
-REQUIRE(fs::file_size(info.existing_file)
-==
-existing_size + test::size_written_orig);
-}
-
-SECTION("append to new file") {
-test::test_open(info
-.new_file.
-
-c_str(), O_WRONLY
-
-| O_CREAT | O_EXCL, 0600);
-REQUIRE(test::fh_orig
-!= -1);
-test::test_write(info
-.write_data.
-
-data(), args
-
-.request_size);
-REQUIRE(test::size_written_orig
-== args.request_size);
-
-test::test_close();
-
-REQUIRE(test::status_orig
-== 0);
-REQUIRE(fs::file_size(info.new_file)
-== test::size_written_orig);
-}
-
-posttest();
-
+#if defined(ATHENA_PRELOAD)
+    file_advice_end(file_handler);
+#endif
+    posttest(new_file, existing_file);
 }

@@ -42,17 +42,24 @@ namespace mimir {
         STRONG_CONSISTENCY = 12
     };
 
-    typedef union AdviceType{
+    struct AdviceType{
         PrimaryAdviceType _primary;
         OperationAdviceType _secondary;
         AdviceType(PrimaryAdviceType primary, OperationAdviceType secondary) {
             _primary = primary;
             _secondary = secondary;
         }
+        AdviceType(const AdviceType& other): _primary(other._primary), _secondary(other._secondary) {}
+        AdviceType(const AdviceType&& other): _primary(other._primary), _secondary(other._secondary) {}
+        AdviceType& operator=(const AdviceType& other) {
+            _primary = other._primary;
+            _secondary = other._secondary;
+            return *this;
+        }
         bool operator==(const AdviceType& other) const {
             return _primary == other._primary && _secondary == other._secondary;
         }
-    } AdviceType;
+    };
 
 }
 

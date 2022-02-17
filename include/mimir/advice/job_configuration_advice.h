@@ -11,8 +11,6 @@
 namespace mimir {
     class JobConfigurationAdvice : public Advice {
     public:
-        JobConfigurationAdvice(AdviceType type) : Advice(type) {}
-        using Advice::_type;
         uint32_t _job_id;
         uint32_t _num_nodes;
         uint16_t _num_cores_per_node;

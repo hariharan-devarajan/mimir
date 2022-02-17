@@ -1,5 +1,10 @@
+
+#if defined(ATHENA_PRELOAD)
+#include <athena/api/posix.h>
+#else
 #include <fcntl.h>
-#include <stdarg.h>
+#endif
+#include <cstdarg>
 #include <unistd.h>
 
 #include <experimental/filesystem>
@@ -7,9 +12,6 @@
 
 #include <catch_config.h>
 #include <test_utils.h>
-#if ATHENA_PRELOAD == 1
-#include <athena/api/posix.h>
-#endif
 
 #ifndef O_TMPFILE
 #define __O_TMPFILE 020000000
@@ -17,11 +19,13 @@
 #define O_TMPFILE_MASK (__O_TMPFILE | O_DIRECTORY | O_CREAT)
 #endif
 namespace fs = std::experimental::filesystem;
-
+const uint32_t KB = 1024;
+const uint32_t MB = 1024 * 1024;
 namespace mimir::posix::test {
     struct Arguments {
         std::string filename = "test.dat";
-        std::string directory = "/tmp";
+        std::string pfs = "/home/haridev/pfs";
+        std::string shm = "/dev/shm/haridev";
         size_t request_size = 65536;
     };
     struct Info {
@@ -33,7 +37,7 @@ namespace mimir::posix::test {
         std::string existing_file;
         std::string new_file_cmp;
         std::string existing_file_cmp;
-        size_t num_iterations = 64;
+        size_t num_iterations = 1024 * 2;
         unsigned int offset_seed = 1;
         unsigned int rs_seed = 1;
         unsigned int temporal_interval_seed = 5;
@@ -44,7 +48,7 @@ namespace mimir::posix::test {
         size_t medium_min = 4 * 1024 + 1, medium_max = 256 * 1024;
         size_t large_min = 256 * 1024 + 1, large_max = 3 * 1024 * 1024;
     };
-}  // namespace hermes::adapter::posix::test
+}  // namespace ::posix::test
 mimir::posix::test::Arguments args;
 mimir::posix::test::Info info;
 std::vector<char> gen_random(const int len) {
@@ -70,8 +74,18 @@ int finalize() {
     return 0;
 }
 
+inline std::string GetFilenameFromFD(int fd) {
+    const int kMaxSize = 0xFFF;
+    char proclnk[kMaxSize];
+    char filename[kMaxSize];
+    snprintf(proclnk, kMaxSize, "/proc/self/fd/%d", fd);
+    size_t r = readlink(proclnk, filename, kMaxSize);
+    filename[r] = '\0';
+    return filename;
+}
+
 int pretest() {
-    fs::path fullpath = args.directory;
+    fs::path fullpath = args.pfs;
     fullpath /= args.filename;
     info.new_file = fullpath.string() + "_new_" + std::to_string(getpid());
     info.existing_file = fullpath.string() + "_ext_" + std::to_string(getpid());
@@ -101,27 +115,19 @@ int pretest() {
                 args.request_size * info.num_iterations);
     }
     REQUIRE(info.total_size > 0);
-#if HERMES_INTERCEPT == 1
-    INTERCEPTOR_LIST->hermes_flush_exclusion.insert(info.existing_file_cmp);
-  INTERCEPTOR_LIST->hermes_flush_exclusion.insert(info.new_file_cmp);
-#endif
     return 0;
 }
 
-int posttest(bool compare_data = true) {
-#if HERMES_INTERCEPT == 1
-    INTERCEPTOR_LIST->hermes_flush_exclusion.insert(info.existing_file);
-  INTERCEPTOR_LIST->hermes_flush_exclusion.insert(info.new_file);
-#endif
-    if (compare_data && fs::exists(info.new_file) &&
+int posttest(std::string new_file, std::string existing_file, bool compare_data = true) {
+    if (compare_data && fs::exists(new_file) &&
         fs::exists(info.new_file_cmp)) {
-        size_t size = fs::file_size(info.new_file);
+        size_t size = fs::file_size(new_file);
         REQUIRE(size == fs::file_size(info.new_file_cmp));
         if (size > 0) {
             std::vector<unsigned char> d1(size, '0');
             std::vector<unsigned char> d2(size, '1');
 
-            FILE* fh1 = fopen(info.new_file.c_str(), "r");
+            FILE* fh1 = fopen(new_file.c_str(), "r");
             REQUIRE(fh1 != nullptr);
             size_t read_d1 = fread(d1.data(), size, sizeof(unsigned char), fh1);
             REQUIRE(read_d1 == sizeof(unsigned char));
@@ -142,16 +148,16 @@ int posttest(bool compare_data = true) {
             REQUIRE(char_mismatch == 0);
         }
     }
-    if (compare_data && fs::exists(info.existing_file) &&
+    if (compare_data && fs::exists(existing_file) &&
         fs::exists(info.existing_file_cmp)) {
-        size_t size = fs::file_size(info.existing_file);
+        size_t size = fs::file_size(existing_file);
         if (size != fs::file_size(info.existing_file_cmp)) sleep(1);
         REQUIRE(size == fs::file_size(info.existing_file_cmp));
         if (size > 0) {
             std::vector<unsigned char> d1(size, 'r');
             std::vector<unsigned char> d2(size, 'w');
 
-            FILE* fh1 = fopen(info.existing_file.c_str(), "r");
+            FILE* fh1 = fopen(existing_file.c_str(), "r");
             REQUIRE(fh1 != nullptr);
             size_t read_d1 = fread(d1.data(), sizeof(unsigned char), size, fh1);
             REQUIRE(read_d1 == size);
@@ -175,25 +181,21 @@ int posttest(bool compare_data = true) {
         }
     }
     /* Clean up. */
-    if (fs::exists(info.new_file)) fs::remove(info.new_file);
-    if (fs::exists(info.existing_file)) fs::remove(info.existing_file);
+    if (fs::exists(new_file)) fs::remove(new_file);
+    if (fs::exists(existing_file)) fs::remove(existing_file);
     if (fs::exists(info.new_file_cmp)) fs::remove(info.new_file_cmp);
     if (fs::exists(info.existing_file_cmp)) fs::remove(info.existing_file_cmp);
 
-#if HERMES_INTERCEPT == 1
-    INTERCEPTOR_LIST->hermes_flush_exclusion.erase(info.existing_file_cmp);
-  INTERCEPTOR_LIST->hermes_flush_exclusion.erase(info.new_file_cmp);
-  INTERCEPTOR_LIST->hermes_flush_exclusion.erase(info.new_file);
-  INTERCEPTOR_LIST->hermes_flush_exclusion.erase(info.existing_file);
-#endif
     return 0;
 }
 
 cl::Parser define_options() {
     return cl::Opt(args.filename, "filename")["-f"]["--filename"](
             "Filename used for performing I/O") |
-           cl::Opt(args.directory, "dir")["-d"]["--directory"](
-                   "Directory used for performing I/O") |
+           cl::Opt(args.pfs, "pfs")["-p"]["--pfs"](
+                   "Directory used for performing I/O (default pfs)") |
+           cl::Opt(args.shm, "shm")["-s"]["--shm"](
+                   "Directory used for performing I/O (default shm)") |
            cl::Opt(args.request_size, "request_size")["-s"]["--request_size"](
                    "Request size used for performing I/O");
 }
@@ -215,8 +217,8 @@ namespace test {
         std::string cmp_path;
         if (strcmp(path, info.new_file.c_str()) == 0) {
             cmp_path = info.new_file_cmp;
-        } else if (strcmp(path, "/tmp") == 0) {
-            cmp_path = "/tmp";
+        } else if (strcmp(path, args.pfs.c_str()) == 0) {
+            cmp_path = args.pfs;
         } else {
             cmp_path = info.existing_file_cmp;
         }

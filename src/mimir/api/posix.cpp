@@ -7,12 +7,12 @@
 #include <mimir/log/logger.h>
 #include <athena/api/interceptor.h>
 #include <athena/api/posix.h>
-#include <athena/mimir_adapter/advice/advice_handler.h>
+#include <mimir/advice/advice_handler.h>
 #include <mimir/common/error_code.h>
 
 namespace mimir {
     MimirStatus file_advice_begin(FileAdvice &advice, MimirHandler &handler) {
-        if (handler._type._primary != PrimaryAdviceType::DATA_FILE) {
+        if (advice._type._primary != PrimaryAdviceType::DATA_FILE) {
             return MIMIR_ONLY_FILE_ALLOWED;
         }
         MimirKey key;

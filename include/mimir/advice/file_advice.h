@@ -14,22 +14,23 @@ public:
     uint32_t _io_amount_mb;
     TransferSizeDistribution _read_distribution;
     TransferSizeDistribution _write_distribution;
+    Storage _device;
     float _per_io_data, _per_io_metadata;
 
-    FileAdvice() : Advice(AdviceType(PrimaryAdviceType::DATA_DATASET,
+    FileAdvice() : Advice(AdviceType(PrimaryAdviceType::DATA_FILE,
                                      OperationAdviceType::NO_OP)), _format(), _size_mb(),
                    _name(), _io_amount_mb(), _read_distribution(),
-                      _write_distribution(), _per_io_data(), _per_io_metadata(){}
+                   _write_distribution(), _per_io_data(), _per_io_metadata(), _device() {}
     FileAdvice(const FileAdvice& other): Advice(other), _format(other._format),
                                          _size_mb(other._size_mb), _name(other._name),
                                          _read_distribution(other._read_distribution),
                                          _write_distribution(other._write_distribution), _per_io_data(other._per_io_data),
-                                         _per_io_metadata(other._per_io_metadata) {}
+                                         _per_io_metadata(other._per_io_metadata), _device(other._device)  {}
     FileAdvice(const FileAdvice&& other): Advice(other), _format(other._format),
                                           _size_mb(other._size_mb), _name(other._name),
                                           _read_distribution(other._read_distribution),
                                           _write_distribution(other._write_distribution), _per_io_data(other._per_io_data),
-                                          _per_io_metadata(other._per_io_metadata) {}
+                                          _per_io_metadata(other._per_io_metadata), _device(other._device) {}
     FileAdvice& operator=(const FileAdvice& other) {
         Advice::operator=(other);
         _format = other._format;
@@ -39,6 +40,7 @@ public:
         _write_distribution = other._write_distribution;
         _per_io_data = other._per_io_data;
         _per_io_metadata = other._per_io_metadata;
+        _device = other._device;
         return *this;
     }
     bool operator<(const FileAdvice& other) const {
@@ -52,10 +54,11 @@ public:
         _format == other._format &&
         _size_mb == other._size_mb &&
         _name == other._name &&
-        _read_distribution == other._read_distribution  &&
-        _write_distribution == other._write_distribution  &&
-        _per_io_data == other._per_io_data  &&
-        _per_io_metadata == other._per_io_metadata;
+        _read_distribution == other._read_distribution &&
+        _write_distribution == other._write_distribution &&
+        _per_io_data == other._per_io_data &&
+        _per_io_metadata == other._per_io_metadata &&
+               _device == other._device;;
     }
 };
 }

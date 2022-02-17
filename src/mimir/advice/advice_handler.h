@@ -19,7 +19,7 @@ namespace mimir {
     template <typename ADVICE>
     class AdviceHandler {
     protected:
-        static std::unordered_map<AdviceType, std::shared_ptr<AdviceHandler<ADVICE>>> instance_map;
+        static std::unordered_map<PrimaryAdviceType, std::shared_ptr<AdviceHandler<ADVICE>>> instance_map;
 
         std::unordered_map<MimirKey, std::set<ADVICE, std::greater<ADVICE>>> _advice;
 
@@ -29,12 +29,12 @@ namespace mimir {
         AdviceHandler(): _conflicts(), _advice() {}
 
         static std::shared_ptr<AdviceHandler<ADVICE>> Instance(AdviceType type) {
-            auto iter = instance_map.find(type);
+            auto iter = instance_map.find(type._primary);
             if (iter != instance_map.end()) {
                 return iter->second;
             } else {
                 auto instance = std::make_shared<AdviceHandler<ADVICE>>();
-                instance_map.emplace(type, instance);
+                instance_map.emplace(type._primary, instance);
                 return instance;
             }
         }
@@ -70,9 +70,11 @@ namespace mimir {
                 val = std::set<ADVICE, std::greater<ADVICE>>();
             } else {
                 val = iter->second;
+                iter->second.erase(advice);
                 _advice.erase(iter);
             }
             val.emplace(advice);
+            _advice.emplace(key, val);
             return MIMIR_SUCCESS;
         }
 
@@ -85,12 +87,16 @@ namespace mimir {
             return _advice.find(key) != _advice.end();
         }
 
-        MimirStatus find_advice(MimirKey &key) {
+        std::pair<bool, std::vector<ADVICE>> find_advice(MimirKey &key) {
             auto iter = _advice.find(key);
             if (iter == _advice.end()) {
-                return std::make_pair(false, std::set<ADVICE, std::greater<ADVICE>>());
+                return std::make_pair(false, std::vector<ADVICE>());
             }
-            return std::pair<bool, std::set<ADVICE, std::greater<ADVICE>>>(true, iter->second);
+            auto advices =  std::vector<ADVICE>();
+            for (auto advice:iter->second) {
+                advices.push_back(advice);
+            }
+            return std::pair<bool,std::vector<ADVICE>>(true, advices);
         }
 
         MimirStatus add_conflicts(ADVICE &advice) {
@@ -100,8 +106,8 @@ namespace mimir {
 
     };
     template <typename ADVICE>
-    std::unordered_map<AdviceType, std::shared_ptr<AdviceHandler<ADVICE>>> AdviceHandler<ADVICE>::instance_map =
-            std::unordered_map<AdviceType, std::shared_ptr<AdviceHandler<ADVICE>>>();
+    std::unordered_map<mimir::PrimaryAdviceType, std::shared_ptr<mimir::AdviceHandler<ADVICE>>> mimir::AdviceHandler<ADVICE>::instance_map =
+            std::unordered_map<PrimaryAdviceType, std::shared_ptr<AdviceHandler<ADVICE>>>();
 }
 
 

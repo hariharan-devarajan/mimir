@@ -11,6 +11,7 @@
 #include <mimir/advice/advice_type.h>
 #include <mimir/mimir.h>
 #include <mimir/advice/posix_file_operation_advice.h>
+#include <mimir/api/job_configuration.h>
 
 namespace mimir {
     MimirStatus file_advice_begin(FileAdvice &payload, MimirHandler &handler);
