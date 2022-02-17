@@ -6,7 +6,7 @@
 #define MIMIR_CATCH_CONFIG_H
 #define CATCH_CONFIG_RUNNER
 #include <catch2/catch.hpp>
-#include <mpi.h>
+//#include <mpi.h>
 
 namespace cl = Catch::clara;
 

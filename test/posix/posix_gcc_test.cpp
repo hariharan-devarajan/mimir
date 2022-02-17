@@ -64,13 +64,13 @@ std::vector<char> gen_random(const int len) {
     return tmp_s;
 }
 int init(int* argc, char*** argv) {
-    MPI_Init(argc, argv);
+    //MPI_Init(argc, argv);
     info.write_data = gen_random(args.request_size);
     info.read_data = std::vector<char>(args.request_size, 'r');
     return 0;
 }
 int finalize() {
-    MPI_Finalize();
+    //MPI_Finalize();
     return 0;
 }
 
