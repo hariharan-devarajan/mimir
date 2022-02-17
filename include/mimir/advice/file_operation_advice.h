@@ -6,6 +6,7 @@
 #define MIMIR_FILE_OPERATION_ADVICE_H
 
 #include "advice_type.h"
+#include "mimir/common/enumeration.h"
 
 namespace mimir {
 class FileOperationAdvice : public Advice {

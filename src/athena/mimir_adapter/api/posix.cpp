@@ -12,6 +12,7 @@
 
 #include <experimental/filesystem>
 
+namespace fs = std::experimental::filesystem;
 int ATHENA_DECL(open64)(const char *path, int flags, ...) {
   int ret;
   va_list arg;
@@ -56,7 +57,7 @@ int ATHENA_DECL(open64)(const char *path, int flags, ...) {
                 if (!updated &&
                     ((int)device._capacity_mb -
                      (int)(device._used_capacity_mb + advice._size_mb)) >= 0) {
-                  fs::create_directories(advice._device._mount_point);
+                  fs::create_directories(device._mount_point);
                   filename.replace(0, advice._device._mount_point.size(),
                                    device._mount_point);
                   device._used_capacity_mb =

@@ -18,8 +18,6 @@
 #define O_TMPFILE_MASK (__O_TMPFILE | O_DIRECTORY | O_CREAT)
 #endif
 namespace fs = std::experimental::filesystem;
-const uint32_t KB = 1024;
-const uint32_t MB = 1024 * 1024;
 namespace mimir::posix::test {
 struct Arguments {
   std::string filename = "test.dat";

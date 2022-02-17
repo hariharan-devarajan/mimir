@@ -6,8 +6,9 @@
 #define MIMIR_MIDDLEWARE_ADVICE_H
 
 #include <mimir/common/enumeration.h>
-
-#include "advice_type.h"
+#include <mimir/advice/advice.h>
+#include <mimir/common/data_structure.h>
+#include <mimir/advice/advice_type.h>
 
 namespace mimir {
 class MiddlewareAdvice : public Advice {

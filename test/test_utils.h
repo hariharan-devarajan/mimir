@@ -8,6 +8,9 @@
 #include <cstdio>
 #include <string>
 
+const uint32_t KB = 1024;
+const uint32_t MB = 1024 * 1024;
+
 size_t GetRandomOffset(size_t i, unsigned int offset_seed, size_t stride,
                        size_t total_size) {
   return abs((int)(((i * rand_r(&offset_seed)) % stride) % total_size));
@@ -32,4 +35,20 @@ std::string GenRandom(const int len) {
 
   return tmp_s;
 }
+
+class Timer {
+ public:
+  Timer() : elapsed_time(0) {}
+  void resumeTime() { t1 = std::chrono::high_resolution_clock::now(); }
+  double pauseTime() {
+    auto t2 = std::chrono::high_resolution_clock::now();
+    elapsed_time += std::chrono::duration<double>(t2 - t1).count();
+    return elapsed_time;
+  }
+  double getElapsedTime() { return elapsed_time; }
+
+ private:
+  std::chrono::high_resolution_clock::time_point t1;
+  double elapsed_time;
+};
 #endif  // MIMIR_TEST_UTILS_H

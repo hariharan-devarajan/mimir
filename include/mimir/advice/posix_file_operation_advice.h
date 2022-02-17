@@ -6,6 +6,7 @@
 #define MIMIR_POSIX_FILE_OPERATION_ADVICE_H
 
 #include "advice.h"
+#include "file_operation_advice.h"
 
 namespace mimir {
 class POSIXFileOperationAdvice : public FileOperationAdvice {

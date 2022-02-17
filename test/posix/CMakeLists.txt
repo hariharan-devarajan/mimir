@@ -1,5 +1,5 @@
-set(PFS /home/haridev/pfs)
-set(SHM /dev/shm)
+set(PFS $ENV{HOME}/temp/mimir/pfs)
+set(SHM /dev/shm/$ENV{USER}/mimir)
 set(examples posix_gcc_test)
 
 function(gcc_base example)
@@ -12,13 +12,11 @@ function(gcc_athena example)
     add_dependencies(${example}_athena ${PROJECT_NAME} athena)
     target_link_libraries(${example}_athena ${PROJECT_NAME} athena -ldl ${TEST_LIBS})
     set_target_properties(${example}_athena PROPERTIES COMPILE_FLAGS "-DATHENA_PRELOAD=1")
-
-
 endfunction()
 
 
 foreach (example ${examples})
-    gcc_base(${example} "" "")
+    gcc_base(${example})
     add_test(NAME test_${example} COMMAND "${CMAKE_BINARY_DIR}/test/posix/${example}" --durations yes --reporter compact --pfs ${PFS} --shm ${SHM})
     add_test(NAME test_${example}_1K COMMAND "${CMAKE_BINARY_DIR}/test/posix/${example}" --request_size 1024 --durations yes --reporter compact --pfs ${PFS} --shm ${SHM})
     add_test(NAME test_${example}_16K COMMAND "${CMAKE_BINARY_DIR}/test/posix/${example}" --request_size 16384 --durations yes --reporter compact --pfs ${PFS} --shm ${SHM})
@@ -26,7 +24,7 @@ foreach (example ${examples})
     add_test(NAME test_${example}_1M COMMAND "${CMAKE_BINARY_DIR}/test/posix/${example}" --request_size 1048576 --durations yes --reporter compact --pfs ${PFS} --shm ${SHM})
     add_test(NAME test_${example}_16M COMMAND "${CMAKE_BINARY_DIR}/test/posix/${example}" --request_size 16777216 --durations yes --reporter compact --pfs ${PFS} --shm ${SHM})
 
-    gcc_athena(${example} "" "")
+    gcc_athena(${example})
     add_test(NAME test_${example}_athena_default COMMAND "${CMAKE_BINARY_DIR}/test/posix/${example}_athena" --durations yes --reporter compact --pfs ${PFS} --shm ${SHM})
     add_test(NAME test_${example}_athena_1K COMMAND "${CMAKE_BINARY_DIR}/test/posix/${example}_athena" --request_size 1024 --durations yes --reporter compact --pfs ${PFS} --shm ${SHM})
     add_test(NAME test_${example}_athena_16K COMMAND "${CMAKE_BINARY_DIR}/test/posix/${example}_athena" --request_size 16384 --durations yes --reporter compact --pfs ${PFS} --shm ${SHM})
@@ -34,4 +32,14 @@ foreach (example ${examples})
     add_test(NAME test_${example}_athena_1M COMMAND "${CMAKE_BINARY_DIR}/test/posix/${example}_athena" --request_size 1048576 --durations yes --reporter compact --pfs ${PFS} --shm ${SHM})
     add_test(NAME test_${example}_athena_16M COMMAND "${CMAKE_BINARY_DIR}/test/posix/${example}_athena" --request_size 16777216 --durations yes --reporter compact --pfs ${PFS} --shm ${SHM})
 
+endforeach ()
+
+set(examples pegasus)
+foreach (example ${examples})
+    gcc_base(${example})
+    add_test(NAME test_${example}_write COMMAND "${CMAKE_BINARY_DIR}/test/posix/${example}" --durations yes --reporter compact --pfs ${PFS} --shm ${SHM} "[operation=write]")
+    add_test(NAME test_${example}_read COMMAND "${CMAKE_BINARY_DIR}/test/posix/${example}" --durations yes --reporter compact --pfs ${PFS} --shm ${SHM} "[operation=read]")
+    gcc_athena(${example})
+    add_test(NAME test_${example}_athena_write COMMAND "${CMAKE_BINARY_DIR}/test/posix/${example}_athena" --durations yes --reporter compact --pfs ${PFS} --shm ${SHM} "[operation=write]")
+    add_test(NAME test_${example}_athena_read COMMAND "${CMAKE_BINARY_DIR}/test/posix/${example}_athena" --durations yes --reporter compact --pfs ${PFS} --shm ${SHM} "[operation=read]")
 endforeach ()
