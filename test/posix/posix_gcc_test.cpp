@@ -37,7 +37,7 @@ namespace mimir::posix::test {
         std::string existing_file;
         std::string new_file_cmp;
         std::string existing_file_cmp;
-        size_t num_iterations = 1024 * 2;
+        size_t num_iterations = 8;
         unsigned int offset_seed = 1;
         unsigned int rs_seed = 1;
         unsigned int temporal_interval_seed = 5;
@@ -65,8 +65,6 @@ std::vector<char> gen_random(const int len) {
 }
 int init(int* argc, char*** argv) {
     //MPI_Init(argc, argv);
-    info.write_data = gen_random(args.request_size);
-    info.read_data = std::vector<char>(args.request_size, 'r');
     return 0;
 }
 int finalize() {
@@ -85,6 +83,8 @@ inline std::string GetFilenameFromFD(int fd) {
 }
 
 int pretest() {
+    info.write_data = std::vector<char>(args.request_size, 'w');
+    info.read_data = std::vector<char>(args.request_size, 'r');
     fs::path fullpath = args.pfs;
     fullpath /= args.filename;
     info.new_file = fullpath.string() + "_new_" + std::to_string(getpid());
@@ -204,8 +204,8 @@ namespace test {
     int fh_orig;
     int fh_cmp;
     int status_orig;
-    size_t size_read_orig;
-    size_t size_written_orig;
+    ssize_t size_read_orig;
+    ssize_t size_written_orig;
     void test_open(const char* path, int flags, ...) {
         int mode = 0;
         if (flags & O_CREAT || flags & O_TMPFILE) {
@@ -240,13 +240,13 @@ namespace test {
     }
     void test_write(const void* ptr, size_t size) {
         size_written_orig = write(fh_orig, ptr, size);
-        size_t size_written = write(fh_cmp, ptr, size);
+        ssize_t size_written = write(fh_cmp, ptr, size);
         REQUIRE(size_written == size_written_orig);
     }
     void test_read(char* ptr, size_t size) {
         size_read_orig = read(fh_orig, ptr, size);
         std::vector<unsigned char> read_data(size, 'r');
-        size_t size_read = read(fh_cmp, read_data.data(), size);
+        ssize_t size_read = read(fh_cmp, read_data.data(), size);
         REQUIRE(size_read == size_read_orig);
         if (size_read > 0) {
             size_t unmatching_chars = 0;
