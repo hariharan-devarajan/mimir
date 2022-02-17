@@ -72,6 +72,12 @@ namespace std {
             return hash_val;
         }
     };
+    template<>
+    struct hash<mimir::PrimaryAdviceType> {
+        size_t operator()(const mimir::PrimaryAdviceType &k) const {
+            return k;
+        }
+    };
 }
 
 #endif //MIMIR_ADVICE_TYPE_H
