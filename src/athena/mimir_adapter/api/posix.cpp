@@ -102,6 +102,9 @@ int ATHENA_DECL(open64)(const char *path, int flags, ...) {
             }
         }
         MAP_OR_FAIL(open64);
+        if (flags & O_DIRECT) {
+            flags ^= O_DIRECT;
+        }
         ret = real_open64_(filename.c_str(), flags, mode);
     } else {
         MAP_OR_FAIL(open64);

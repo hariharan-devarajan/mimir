@@ -29,7 +29,7 @@ TEST_CASE("BatchedWriteSequential",
     file_advice._per_io_data = info.num_iterations/(info.num_iterations + 2);
     file_advice._per_io_metadata = 2/(info.num_iterations + 2);
     file_advice._size_mb = args.request_size * info.num_iterations;
-    file_advice._device = Storage("/home/haridev/pfs", 128);
+    file_advice._device = Storage(args.pfs, 128);
 
     if (args.request_size >= 0 && args.request_size < 4 * KB) file_advice._write_distribution._0_4kb = 1.0;
     else if (args.request_size >= 4 * KB && args.request_size < 64 * KB) file_advice._write_distribution._4_64kb = 1.0;
@@ -48,7 +48,7 @@ TEST_CASE("BatchedWriteSequential",
         file_advice._name = info.new_file;
         file_advice_begin(file_advice, file_handler);
 #endif
-        test::test_open(info.new_file.c_str(), O_WRONLY | O_CREAT, 0600);
+        test::test_open(info.new_file.c_str(), O_WRONLY | O_CREAT | O_DIRECT, 0600);
         REQUIRE(test::fh_orig != -1);
 
         for (size_t i = 0; i < info.num_iterations; ++i) {
@@ -70,7 +70,7 @@ TEST_CASE("BatchedWriteSequential",
         file_advice._name = info.new_file;
         file_advice_begin(file_advice, file_handler);
 #endif
-        test::test_open(info.new_file.c_str(), O_WRONLY | O_CREAT, 0600);
+        test::test_open(info.new_file.c_str(), O_WRONLY | O_CREAT | O_DIRECT, 0600);
         REQUIRE(test::fh_orig != -1);
 
         for (size_t i = 0; i < info.num_iterations; ++i) {
