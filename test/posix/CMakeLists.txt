@@ -1,4 +1,4 @@
-set(PFS /home/haridev/pfs/)
+set(PFS /home/haridev/pfs)
 set(SHM /dev/shm)
 set(examples posix_gcc_test)
 

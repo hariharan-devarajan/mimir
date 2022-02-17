@@ -48,7 +48,7 @@ int ATHENA_DECL(open64)(const char *path, int flags, ...) {
                              mimir::Storage device;
                              for (int i = 0; i < num_devices; ++i) {
                                  device = job_conf_advice._devices[i];
-                                 if (!updated && (device._capacity_mb - device._used_capacity_mb - advice._size_mb) > 0) {
+                                 if (!updated && ((int)device._capacity_mb - (int)(device._used_capacity_mb + advice._size_mb)) >= 0) {
 
                                      filename.replace(0, advice._device._mount_point.size(),
                                                       device._mount_point);
