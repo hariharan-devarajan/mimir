@@ -171,10 +171,10 @@ TEST_CASE("Read",
 
   initialization.resumeTime();
   fs::path filepath = args.pfs / args.filename;
-
   /** Prepare data **/
   auto read_data = std::vector<char>(args.request_size, 'r');
   initialization.pauseTime();
+  fprintf(stdout, "file to read %s\n", filepath.c_str());
 #ifdef ATHENA_PRELOAD
   using namespace mimir;
   MimirHandler job_configuration_handler;

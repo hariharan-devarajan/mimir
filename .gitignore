@@ -34,3 +34,15 @@
 /build/
 
 /.clion.source.upload.marker
+/test/posix/pegasus/pegasus/work/
+/test/posix/pegasus/pegasus/pegasus.properties
+/test/posix/pegasus/pegasus/replicas.yml
+/test/posix/pegasus/pegasus/sites.yml
+/test/posix/pegasus/pegasus/transformations.yml
+/test/posix/pegasus/pegasus/workflow.yml
+/test/posix/pegasus/pegasus_athena/work/
+/test/posix/pegasus/pegasus_athena/pegasus.properties
+/test/posix/pegasus/pegasus_athena/replicas.yml
+/test/posix/pegasus/pegasus_athena/sites.yml
+/test/posix/pegasus/pegasus_athena/transformations.yml
+/test/posix/pegasus/pegasus_athena/workflow.yml

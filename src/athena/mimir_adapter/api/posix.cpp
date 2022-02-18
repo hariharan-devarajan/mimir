@@ -11,6 +11,8 @@
 #include <mimir/log/logger.h>
 
 #include <experimental/filesystem>
+#include <errno.h>
+#include <cstring>
 
 namespace fs = std::experimental::filesystem;
 int ATHENA_DECL(open64)(const char *path, int flags, ...) {
@@ -114,6 +116,10 @@ int ATHENA_DECL(open64)(const char *path, int flags, ...) {
       flags ^= O_DIRECT;
     }
     ret = real_open64_(filename.c_str(), flags, mode);
+    if (ret == -1) {
+      fprintf(stderr, "[Athena] Opening file %s\n", filename.c_str());
+      fprintf(stderr, "[Athena] Error opening file: %s\n", strerror(errno));
+    }
   } else {
     MAP_OR_FAIL(open64);
     ret = real_open64_(path, flags, mode);
