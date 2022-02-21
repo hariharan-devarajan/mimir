@@ -106,10 +106,7 @@ class MimirWorkflow:
         self.tc = TransformationCatalog()
 
         path = self.mimir_bin
-        if self.intercept:
-            filename = os.path.join(path, "pegasus_athena")
-        else:
-            filename = os.path.join(path, "pegasus")
+        filename = os.path.join(path, "pegasus")
         write = Transformation(
             "pegasus_write", site=exec_site_name, pfn=filename, is_stageable=False,
         )
@@ -127,19 +124,25 @@ class MimirWorkflow:
     def create_workflow(self):
         self.wf = Workflow(self.wf_name, infer_dependencies=True)
         file_data = File("test.dat")
-
+        ld_preload = ""
+        if self.intercept:
+            if "ATHENA_LIB_PATH" not in os.environ:
+                raise Exception('ATHENA_LIB_PATH not set. Needs to point to libathena.so.')
+            ld_preload = os.environ["ATHENA_LIB_PATH"]
         # the split job that splits the webpage into smaller chunks
         write = (
             Job("pegasus_write")
                 .add_args("--durations", "yes", "--reporter", "compact",
                           "--pfs", self.pfs, "--shm", self.shm, "[operation=write]")
                 .add_outputs(file_data, stage_out=False, register_replica=False)
+                .add_profiles(Namespace.ENV, key="LD_PRELOAD", value=f"{ld_preload}")
         )
         read = (
             Job("pegasus_read")
                 .add_args("--durations", "yes", "--reporter", "compact",
                           "--pfs", self.pfs, "--shm", self.shm, "[operation=read]")
                 .add_inputs(file_data)
+                .add_profiles(Namespace.ENV, key="LD_PRELOAD", value=f"{ld_preload}")
         )
         self.wf.add_jobs(write, read)
 

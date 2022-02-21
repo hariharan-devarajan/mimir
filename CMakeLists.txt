@@ -46,7 +46,7 @@ set(ATHENA_LIBRARY_SRC src/athena/mimir_adapter/api/posix.cpp
         include/athena/api/posix.h)
 
 add_library(athena SHARED ${ATHENA_LIBRARY_SRC})
-target_link_libraries(athena ${PROJECT_NAME})
+target_link_libraries(athena ${PROJECT_NAME} -lstdc++fs -ldl)
 target_compile_definitions(athena PUBLIC ATHENA_PRELOAD)
 
 

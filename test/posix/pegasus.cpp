@@ -5,11 +5,8 @@
 #include <experimental/filesystem>
 namespace fs = std::experimental::filesystem;
 
-#if defined(ATHENA_PRELOAD)
-#include <athena/api/posix.h>
-#else
+#include <mimir/api/posix.h>
 #include <fcntl.h>
-#endif
 /**
  * Test data structures
  */
@@ -86,7 +83,6 @@ TEST_CASE("Write",
   auto write_data = std::vector<char>(args.request_size, 'w');
   initialization.pauseTime();
 
-#ifdef ATHENA_PRELOAD
   using namespace mimir;
   MimirHandler job_configuration_handler;
   JobConfigurationAdvice job_conf_advice;
@@ -123,7 +119,6 @@ TEST_CASE("Write",
   file_advice._priority = 100;
   file_advice._name = filepath;
   file_advice_begin(file_advice, file_handler);
-#endif
 
   /** Main I/O **/
   metadata.resumeTime();
@@ -152,9 +147,7 @@ TEST_CASE("Write",
   finalization.resumeTime();
   printf("I/O performed on file %s\n", new_file.c_str());
   finalization.pauseTime();
-#if defined(ATHENA_PRELOAD)
   file_advice_end(file_handler);
-#endif
   fprintf(stdout, "Timing: init %f, metadata %f, io %f, and finalize %f.\n",
           initialization.getElapsedTime(), metadata.getElapsedTime(),
           io.getElapsedTime(), finalization.getElapsedTime());
@@ -175,7 +168,7 @@ TEST_CASE("Read",
   auto read_data = std::vector<char>(args.request_size, 'r');
   initialization.pauseTime();
   fprintf(stdout, "file to read %s\n", filepath.c_str());
-#ifdef ATHENA_PRELOAD
+
   using namespace mimir;
   MimirHandler job_configuration_handler;
   JobConfigurationAdvice job_conf_advice;
@@ -212,7 +205,7 @@ TEST_CASE("Read",
   file_advice._priority = 100;
   file_advice._name = filepath;
   file_advice_begin(file_advice, file_handler);
-#endif
+
   /** Main I/O **/
   metadata.resumeTime();
   int fd = open(filepath.c_str(), O_RDONLY);
@@ -241,9 +234,7 @@ TEST_CASE("Read",
   finalization.resumeTime();
   printf("I/O performed on file %s\n", new_file.c_str());
   finalization.pauseTime();
-#if defined(ATHENA_PRELOAD)
   file_advice_end(file_handler);
-#endif
   fprintf(stdout, "Timing: init %f, metadata %f, io %f, and finalize %f.\n",
           initialization.getElapsedTime(), metadata.getElapsedTime(),
           io.getElapsedTime(), finalization.getElapsedTime());
