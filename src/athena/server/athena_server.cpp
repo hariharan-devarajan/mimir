@@ -5,7 +5,7 @@
 #include "athena_server.h"
 
 #include <athena/server/posix_io.h>
-#include <hcl/common/macros.h>
+
 #include <hcl/communication/rpc_lib.h>
 #include <mimir/advice/advice_handler.h>
 #include <mimir/advice/advice_type.h>
@@ -13,6 +13,8 @@
 #include <mpi.h>
 
 #include <cmath>
+#include <thallium.hpp>
+#include <hcl/common/macros.h>
 #include <thallium/serialization/stl/string.hpp>
 
 std::shared_ptr<athena::Server> athena::Server::instance = nullptr;
