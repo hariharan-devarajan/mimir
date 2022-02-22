@@ -11,6 +11,8 @@
 #include "mimir/log/logger.h"
 #ifdef ATHENA_PRELOAD
 
+void OnExit(void);
+
 extern const char* kPathExclusions[15];
 extern const char* kExtensionExclusions[1];
 extern std::vector<std::string> track_files;
@@ -38,7 +40,7 @@ inline void print_backtrace(void) {
 }
 
 inline std::string GetFilenameFromFD(int fd) {
-  const int kMaxSize = 0xFFF;
+  const int kMaxSize = 256;
   char proclnk[kMaxSize];
   char filename[kMaxSize];
   snprintf(proclnk, kMaxSize, "/proc/self/fd/%d", fd);
@@ -46,33 +48,11 @@ inline std::string GetFilenameFromFD(int fd) {
   filename[r] = '\0';
   return filename;
 }
-inline bool IsTracked(const std::string& path) {
-  for (const auto& pth : track_files) {
-    if (path.find(pth) == 0) {
-      /*mimir::Logger::Instance("ATHENA")->log(mimir::LOG_INFO,
-                                             "Tracking file %s",
-         path.c_str());*/
-      return true;
-    }
-  }
-  if (path == "/") {
-    return false;
-  }
-  for (const auto& pth : kPathExclusions) {
-    if (path.find(pth) == 0) {
-      return false;
-    }
-  }
-  for (const auto& extension : kExtensionExclusions) {
-    if (path.substr(path.find_last_of('.') + 1) == extension) {
-      return false;
-    }
-  }
-  /*mimir::Logger::Instance("ATHENA")->log(mimir::LOG_INFO, "Tracking file %s",
-                                         path.c_str());*/
-  return true;
+bool IsTracked(std::string path);
+inline bool IsTracked(int fd) {
+  std::string file = GetFilenameFromFD(fd);
+  return IsTracked(file);
 }
-inline bool IsTracked(int fd) { return IsTracked(GetFilenameFromFD(fd)); }
 
 #include <dlfcn.h>
 

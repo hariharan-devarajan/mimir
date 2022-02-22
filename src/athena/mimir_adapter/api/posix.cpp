@@ -29,9 +29,8 @@ int ATHENA_DECL(open64)(const char *path, int flags, ...) {
   bool perform_io = true;
   std::string filename(path);
   if (IsTracked(path)) {
-    auto client = athena::Client::Instance(true);
+    auto client = athena::Client::Instance();
     if (client != nullptr) {
-      athena::Client::Instance(true);
 
       bool is_read_only = false;
       if (flags & O_RDONLY) {
@@ -123,7 +122,7 @@ int ATHENA_DECL(open64)(const char *path, int flags, ...) {
                       path);
                   ret = client->_rpc->call<int>(server_index,
                                                 "athena::posix::open", filename,
-                                                mode, flags);
+                                                flags, mode);
                   perform_io = false;
                 } else {
                   mimir::Logger::Instance("ATHENA")->log(
@@ -221,12 +220,17 @@ int ATHENA_DECL(open64)(const char *path, int flags, ...) {
       if (perform_io) {
         ret = real_open64_(filename.c_str(), flags, mode);
         mimir::Logger::Instance("ATHENA")->log(
-            mimir::LOG_INFO, "Opened file %s with fd %d", path, ret);
+            mimir::LOG_INFO, "Opened file %s with fd %d on rank %d",
+            filename.c_str(), ret, current_rank);
         if (ret == -1) {
           mimir::Logger::Instance("ATHENA")->log(mimir::LOG_ERROR,
                                                  "Error %s opening file: %s",
                                                  strerror(errno), path);
         }
+      }
+      auto iter = client->_fd_server.find(ret);
+      if (iter != client->_fd_server.end()) {
+        client->_fd_server.erase(ret);
       }
       client->_fd_server.emplace(ret, server_index);
     } else {
@@ -245,9 +249,9 @@ int ATHENA_DECL(open64)(const char *path, int flags, ...) {
     if (perform_io) {
       ret = real_open64_(filename.c_str(), flags, mode);
       if (ret == -1) {
-        mimir::Logger::Instance("ATHENA")->log(mimir::LOG_ERROR,
-                                               "Error %s opening file: %s",
-                                               strerror(errno), path);
+        mimir::Logger::Instance("ATHENA")->log(
+            mimir::LOG_ERROR, "Error %s opening file: %s", strerror(errno),
+            filename.c_str());
       }
     }
   }
@@ -265,10 +269,12 @@ int ATHENA_DECL(open)(const char *path, int flags, ...) {
 }
 
 ssize_t ATHENA_DECL(read)(int fd, void *buf, size_t count) {
-  size_t ret;
+  ssize_t ret;
   /* TODO: add logic to read from remote*/
   bool perform_io = true;
+  bool is_tracked = false;
   if (IsTracked(fd)) {
+    is_tracked = true;
     auto client = athena::Client::Instance();
     if (client != nullptr) {
       auto iter = client->_fd_server.find(fd);
@@ -279,23 +285,31 @@ ssize_t ATHENA_DECL(read)(int fd, void *buf, size_t count) {
         uint16_t my_server_index =
             ceil(current_rank /
                  client->_job_configuration_advice._num_cores_per_node);
-        if (my_server_index != file_server_index) {
-          mimir::Logger::Instance("ATHENA")->log(
-              mimir::LOG_INFO,
-              "Perform RPC on server %d read for file_descriptor %d",
-              file_server_index, fd);
-          auto data = client->_rpc->call<std::string>(
-              file_server_index, "athena::posix::read", fd, count);
-          memcpy(buf, data.c_str(), count);
-          ret = data.size();
-          perform_io = false;
-        }
+        // FIXME: if (my_server_index != file_server_index) {
+        mimir::Logger::Instance("ATHENA")->log(
+            mimir::LOG_INFO,
+            "Perform RPC on server %d read for file_descriptor %d",
+            file_server_index, fd);
+        auto data = client->_rpc->call<std::vector<char>>(
+            file_server_index, "athena::posix::read", fd, count);
+        memcpy(buf, data.data(), count);
+        ret = count;
+        perform_io = false;
+        // }
       }
     }
   }
   if (perform_io) {
     MAP_OR_FAIL(read);
     ret = real_read_(fd, buf, count);
+    if (ret == -1) {
+      mimir::Logger::Instance("ATHENA")->log(
+          mimir::LOG_ERROR, "Error %s Reading fd: %d", strerror(errno), fd);
+    } else if (ret != count && is_tracked) {
+      mimir::Logger::Instance("ATHENA")->log(
+          mimir::LOG_ERROR, "Error %s Reading fd: %d written only %d of %d",
+          strerror(errno), fd, ret, count);
+    }
   }
   return ret;
 }
@@ -318,26 +332,33 @@ ssize_t ATHENA_DECL(write)(int fd, const void *buf, size_t count) {
         my_server_index =
             ceil(current_rank /
                  client->_job_configuration_advice._num_cores_per_node);
-        if (my_server_index != file_server_index) {
-          ret = client->_rpc->call<ssize_t>(file_server_index,
-                                            "athena::posix::write", fd,
-                                            std::string((char *)buf), count);
-          mimir::Logger::Instance("ATHENA")->log(
-              mimir::LOG_INFO,
-              "Perform RPC on server %d from rank %d with server_index %d "
-              "write for file_descriptor "
-              "%d and ret "
-              "%d",
-              file_server_index, current_rank, my_server_index, fd, ret);
-          perform_io = false;
-        }
+        // FIXME: if (my_server_index != file_server_index) {
+        ret = client->_rpc->call<ssize_t>(file_server_index,
+                                          "athena::posix::write", fd,
+                                          std::string((char *)buf), count);
+        mimir::Logger::Instance("ATHENA")->log(
+            mimir::LOG_INFO,
+            "Perform RPC on server %d from rank %d with server_index %d "
+            "write for file_descriptor "
+            "%d and ret "
+            "%d",
+            file_server_index, current_rank, my_server_index, fd, ret);
+        perform_io = false;
+        // }
       }
     }
   }
   if (perform_io) {
     MAP_OR_FAIL(write);
     ret = real_write_(fd, buf, count);
-    if (is_tracked)
+    if (ret == -1) {
+      mimir::Logger::Instance("ATHENA")->log(
+          mimir::LOG_ERROR, "Error %s Writing fd: %d", strerror(errno), fd);
+    } else if (ret != count) {
+      mimir::Logger::Instance("ATHENA")->log(
+          mimir::LOG_ERROR, "Error %s Writing fd: %d written only %d of %d",
+          strerror(errno), fd, ret, count);
+    } else if (is_tracked)
       mimir::Logger::Instance("ATHENA")->log(
           mimir::LOG_INFO,
           "Perform Write on Local on rank %d with server_index %d for "

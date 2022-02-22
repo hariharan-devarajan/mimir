@@ -1,5 +1,5 @@
 set(PFS $ENV{HOME}/temp/mimir/pfs)
-set(SHM /dev/shm/$ENV{USER}/mimir)
+set(SHM $ENV{HOME}/temp/mimir/shm)
 set(examples posix_gcc_test)
 
 function(gcc_base example)
@@ -20,7 +20,7 @@ function(gcc_athena_test test_name test_tag)
 endfunction()
 
 function(mpi_athena_test test_name test_tag)
-    add_test(NAME ${test_name} COMMAND ${CMAKE_PREFIX_PATH}/bin/mpirun -n 4 ${CMAKE_BINARY_DIR}/test/posix/pegasus_mpi --durations yes --reporter compact --pfs ${PFS} --shm ${SHM} ${test_tag})
+    add_test(NAME ${test_name} COMMAND ${CMAKE_BINARY_DIR}/test/posix/pegasus_mpi --durations yes --reporter compact --pfs ${PFS} --shm ${SHM} ${test_tag})
     set_property(TEST ${test_name} APPEND PROPERTY ENVIRONMENT LD_PRELOAD=${CMAKE_BINARY_DIR}/libathena.so)
     set_property(TEST ${test_name} APPEND PROPERTY ENVIRONMENT MPICH_DBG_LEVEL=VERBOSE)
 endfunction()

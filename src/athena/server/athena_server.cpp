@@ -20,16 +20,16 @@
 
 std::shared_ptr<athena::Server> athena::Server::instance = nullptr;
 namespace athena {
-THALLIUM_DEFINE(posix_open, (filename, mode, flags), std::string &filename,
+THALLIUM_DEFINE(posix_open, (filename, mode, flags), std::vector<char> filename,
                 int mode, int flags);
 THALLIUM_DEFINE(posix_close, (fd), int fd);
 THALLIUM_DEFINE(posix_lseek, (fd, offset, whence), int fd, off_t offset,
                 int whence);
-THALLIUM_DEFINE(posix_write, (fd, buf, count), int fd, std::string &buf,
+THALLIUM_DEFINE(posix_write, (fd, buf, count), int fd, std::vector<char> &buf,
                 size_t count);
 THALLIUM_DEFINE(posix_read, (fd, count), int fd, size_t count);
 }  // namespace athena
-athena::Server::Server(bool is_mpi) {
+athena::Server::Server(bool is_mpi) : is_server(false) {
   auto job_conf_type =
       mimir::AdviceType(mimir::PrimaryAdviceType::JOB_CONFIGURATION,
                         mimir::OperationAdviceType::NO_OP);
@@ -46,13 +46,12 @@ athena::Server::Server(bool is_mpi) {
       MPI_Comm_rank(MPI_COMM_WORLD, &current_rank);
     else
       current_rank = 0;
-    std::shared_ptr<RPC> _rpc;
     if (current_rank % _job_configuration_advice._num_cores_per_node == 0) {
       // node server rank
       uint16_t my_server_index =
           ceil(current_rank / _job_configuration_advice._num_cores_per_node);
-
-      HCL_CONF->IS_SERVER = true;
+      is_server = true;
+      HCL_CONF->IS_SERVER = is_server;
       HCL_CONF->MY_SERVER = my_server_index;
       HCL_CONF->NUM_SERVERS = _job_configuration_advice._num_nodes;
       HCL_CONF->SERVER_ON_NODE = true;
@@ -64,7 +63,8 @@ athena::Server::Server(bool is_mpi) {
 
       _rpc = hcl::Singleton<RPCFactory>::GetInstance()->GetRPC(
           _job_configuration_advice._rpc_port);
-      std::function<void(const thallium::request &, std::string &, int, int)>
+      std::function<void(const thallium::request &, std::vector<char> &, int,
+                         int)>
           funcOpen = std::bind(&athena::Thalliumposix_open,
                                std::placeholders::_1, std::placeholders::_2,
                                std::placeholders::_3, std::placeholders::_4);
@@ -78,7 +78,8 @@ athena::Server::Server(bool is_mpi) {
       std::function<void(const thallium::request &, int, size_t)> funcRead =
           std::bind(&athena::Thalliumposix_read, std::placeholders::_1,
                     std::placeholders::_2, std::placeholders::_3);
-      std::function<void(const thallium::request &, int, std::string &, size_t)>
+      std::function<void(const thallium::request &, int, std::vector<char> &,
+                         size_t)>
           funcWrite = std::bind(&athena::Thalliumposix_write,
                                 std::placeholders::_1, std::placeholders::_2,
                                 std::placeholders::_3, std::placeholders::_4);

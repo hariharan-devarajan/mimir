@@ -18,14 +18,14 @@ int finalize();
 int main(int argc, char* argv[]) {
   Catch::Session session;
   auto cli = session.cli() | define_options();
-  int returnCode = init(&argc, &argv);
-  if (returnCode != 0) return returnCode;
   session.cli(cli);
-  returnCode = session.applyCommandLine(argc, argv);
+  int returnCode = session.applyCommandLine(argc, argv);
+  if (returnCode != 0) return returnCode;
+  returnCode = init(&argc, &argv);
   if (returnCode != 0) return returnCode;
   int test_return_code = session.run();
   returnCode = finalize();
   if (returnCode != 0) return returnCode;
-  return test_return_code;
+  exit(test_return_code);
 }
 #endif  // MIMIR_CATCH_CONFIG_H

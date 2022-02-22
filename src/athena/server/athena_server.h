@@ -15,9 +15,10 @@ class Server {
  private:
   static std::shared_ptr<Server> instance;
   mimir::JobConfigurationAdvice _job_configuration_advice;
+  bool is_server;
 
  public:
-  std::shared_ptr<RPC> rpc;
+  std::shared_ptr<RPC> _rpc;
   static std::shared_ptr<Server> Instance(bool is_mpi = false) {
     auto job_conf_type =
         mimir::AdviceType(mimir::PrimaryAdviceType::JOB_CONFIGURATION,
@@ -37,7 +38,11 @@ class Server {
   }
   Server(bool is_mpi);
 
-  void finalize() {}
+  void finalize() {
+    if (is_server) {
+      //_rpc->Stop();
+    }
+  }
 };
 }  // namespace athena
 #endif  // MIMIR_ATHENA_SERVER_H

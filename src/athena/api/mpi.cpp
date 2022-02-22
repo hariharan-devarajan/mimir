@@ -9,7 +9,6 @@
 
 #include <cmath>
 #include <iostream>
-
 /**
  * MPI
  */
@@ -19,14 +18,17 @@ int ATHENA_DECL(MPI_Init)(int *argc, char ***argv) {
   if (status == 0) {
     mimir::Logger::Instance("ATHENA")->log(mimir::LOG_INFO,
                                            "Intercepting MPI_Init");
-    auto server = athena::Server::Instance(true);
+    athena::Server::Instance(true);
     MPI_Barrier(MPI_COMM_WORLD);
-    auto client = athena::Client::Instance(true);
+    athena::Client::Instance(true);
+    MPI_Barrier(MPI_COMM_WORLD);
   }
   return status;
 }
 
 int ATHENA_DECL(MPI_Finalize)(void) {
+  MPI_Barrier(MPI_COMM_WORLD);
+  OnExit();
   mimir::Logger::Instance("ATHENA")->log(mimir::LOG_INFO,
                                          "Intercepting MPI_Finalize");
   auto client = athena::Client::Instance();

@@ -89,7 +89,8 @@ class Client {
     }
   }
 
-  void finalize() {}
+  void finalize() {  //_rpc->Stop();
+  }
 };
 }  // namespace athena
 #endif  // MIMIR_ATHENA_CLIENT_H

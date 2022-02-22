@@ -13,12 +13,12 @@ namespace fs = std::experimental::filesystem;
  */
 namespace mimir::test {
 struct Arguments {
-  fs::path pfs = "/home/haridev/pfs";
-  fs::path shm = "/dev/shm/haridev";
+  fs::path pfs = "/home/hariharan/temp/mimir/pfs";
+  fs::path shm = "/home/hariharan/temp/mimir/shm";
   std::string filename = "test.dat";
   size_t request_size = 65536;
   size_t iteration = 1;
-  bool debug = true;
+  bool debug = false;
 };
 }  // namespace mimir::test
 
@@ -29,7 +29,7 @@ mimir::test::Arguments args;
  */
 
 int init(int* argc, char*** argv) {
-  fprintf(stdout, "Initializing MPI\n");
+  //  fprintf(stdout, "Initializing MPI\n");
   using namespace mimir;
   MimirHandler job_configuration_handler;
   JobConfigurationAdvice job_conf_advice;
@@ -407,7 +407,7 @@ TEST_CASE("ReadAfterWriteShared",
   file_advice._format = Format::FORMAT_BINARY;
   file_advice._priority = 100;
   for (int i = 0; i < comm_size; ++i) {
-    auto filename = args.filename + "." + std::to_string(my_rank) + "." +
+    auto filename = args.filename + "." + std::to_string(i) + "." +
                     std::to_string(comm_size);
     fs::path filepath = args.pfs / filename;
     file_advice._name = filepath;
@@ -437,20 +437,16 @@ TEST_CASE("ReadAfterWriteShared",
     io.pauseTime();
     REQUIRE(bytes_written == args.request_size);
   }
-  finalization.resumeTime();
-  auto new_file_write = GetFilenameFromFD(write_fd);
-  finalization.pauseTime();
   metadata.resumeTime();
   int close_status_write = close(write_fd);
   metadata.pauseTime();
   REQUIRE(close_status_write == 0);
-  REQUIRE(fs::file_size(new_file_write) == args.request_size * args.iteration);
 
   finalization.resumeTime();
-  printf("Write I/O performed on file %s\n", new_file_write.c_str());
+  printf("Write I/O performed on file %s\n", my_io_filename.c_str());
   finalization.pauseTime();
 
-  /** Read I/O **/
+  /* Read I/O */
   metadata.resumeTime();
   int read_fd = open(my_io_filename.c_str(), O_RDONLY);
   metadata.pauseTime();
@@ -464,18 +460,11 @@ TEST_CASE("ReadAfterWriteShared",
     REQUIRE(bytes_read == args.request_size);
   }
 
-  finalization.resumeTime();
-  auto new_file_read = GetFilenameFromFD(read_fd);
-  finalization.pauseTime();
-
   metadata.resumeTime();
   int close_status = close(read_fd);
   metadata.pauseTime();
   REQUIRE(close_status == 0);
 
-  finalization.resumeTime();
-  printf("Read I/O performed on file %s\n", new_file_read.c_str());
-  finalization.pauseTime();
   file_advice_end(file_handler);
   fprintf(stdout,
           "Timing rank %d: init %f, metadata %f, io %f, and finalize %f.\n",
