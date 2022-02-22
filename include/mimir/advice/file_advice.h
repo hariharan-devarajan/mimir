@@ -5,6 +5,8 @@
 #ifndef MIMIR_FILE_ADVICE_H
 #define MIMIR_FILE_ADVICE_H
 #include <mimir/advice/advice.h>
+#include <mimir/common/enumeration.h>
+#include <mimir/common/data_structure.h>
 namespace mimir {
 class FileAdvice : public Advice {
  public:

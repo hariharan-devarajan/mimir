@@ -17,6 +17,10 @@ class JobConfigurationAdvice : public Advice {
   uint8_t _num_gpus_per_node;
   std::vector<Storage> _devices;
   uint32_t _job_time_minutes;
+  std::vector<std::string> _node_names;
+  std::string _network_protocol;
+  uint16_t _rpc_port;
+  uint16_t _rpc_threads;
 
   JobConfigurationAdvice()
       : Advice(AdviceType(PrimaryAdviceType::JOB_CONFIGURATION,
@@ -26,7 +30,11 @@ class JobConfigurationAdvice : public Advice {
         _num_cores_per_node(1),
         _num_gpus_per_node(0),
         _devices(),
-        _job_time_minutes(30) {}
+        _job_time_minutes(30),
+        _node_names({"localhost"}),
+        _network_protocol("tcp"),
+        _rpc_port(8888),
+        _rpc_threads(1) {}
 
   JobConfigurationAdvice(const JobConfigurationAdvice& other)
       : Advice(other),
@@ -35,7 +43,11 @@ class JobConfigurationAdvice : public Advice {
         _num_cores_per_node(other._num_cores_per_node),
         _num_gpus_per_node(other._num_gpus_per_node),
         _devices(other._devices),
-        _job_time_minutes(other._job_time_minutes) {}
+        _job_time_minutes(other._job_time_minutes),
+        _node_names(other._node_names),
+        _network_protocol(other._network_protocol),
+        _rpc_port(other._rpc_port),
+        _rpc_threads(other._rpc_threads) {}
   JobConfigurationAdvice(const JobConfigurationAdvice&& other)
       : Advice(other),
         _num_nodes(other._num_nodes),
@@ -43,7 +55,11 @@ class JobConfigurationAdvice : public Advice {
         _num_cores_per_node(other._num_cores_per_node),
         _num_gpus_per_node(other._num_gpus_per_node),
         _devices(other._devices),
-        _job_time_minutes(other._job_time_minutes) {}
+        _job_time_minutes(other._job_time_minutes),
+        _node_names(other._node_names),
+        _network_protocol(other._network_protocol),
+        _rpc_port(other._rpc_port),
+        _rpc_threads(other._rpc_threads) {}
   JobConfigurationAdvice& operator=(const JobConfigurationAdvice& other) {
     Advice::operator=(other);
     _num_nodes = other._num_nodes;
@@ -52,6 +68,10 @@ class JobConfigurationAdvice : public Advice {
     _num_gpus_per_node = other._num_gpus_per_node;
     _devices = other._devices;
     _job_time_minutes = other._job_time_minutes;
+    _node_names = other._node_names;
+    _network_protocol = other._network_protocol;
+    _rpc_port = other._rpc_port;
+    _rpc_threads = other._rpc_threads;
     return *this;
   }
   bool operator<(const JobConfigurationAdvice& other) const {
@@ -66,7 +86,10 @@ class JobConfigurationAdvice : public Advice {
            _num_cores_per_node == other._num_cores_per_node &&
            _num_gpus_per_node == other._num_gpus_per_node &&
            _devices == other._devices &&
-           _job_time_minutes == other._job_time_minutes;
+           _job_time_minutes == other._job_time_minutes &&
+           _node_names == other._node_names &&
+           _network_protocol == other._network_protocol &&
+           _rpc_port == other._rpc_port && _rpc_threads == other._rpc_threads;
   }
 };
 }  // namespace mimir

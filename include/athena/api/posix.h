@@ -7,7 +7,6 @@
 
 #include <athena/api/interceptor.h>
 #include <fcntl.h>
-#include <mimir/api/posix.h>
 #include <unistd.h>
 
 ATHENA_FORWARD_DECL(open64, int, (const char *path, int flags, ...));

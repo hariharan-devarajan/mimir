@@ -2,6 +2,11 @@
 // Created by haridev on 2/16/22.
 //
 
+#include "mimir/common/data_structure.h"
+#include "mimir/advice/job_configuration_advice.h"
+#include "mimir/api/job_configuration.h"
+#include "mimir/advice/file_advice.h"
+#include "mimir/api/posix.h"
 TEST_CASE("BatchedWriteSequential",
           "[process=" + std::to_string(info.comm_size) +
               "]"

@@ -6,7 +6,7 @@ set(CMAKE_CXX_STANDARD 17)
 include(GNUInstallDirs)
 include_directories(src)
 include_directories(include)
-
+add_definitions(-w)
 set(MIMIR_LIBRARY_SRC include/mimir/mimir.h
         include/mimir/advice/advice.h
         include/mimir/advice/advice_type.h
@@ -43,10 +43,20 @@ set(MIMIR_LIBRARY_SRC include/mimir/mimir.h
 add_library(${PROJECT_NAME} SHARED ${MIMIR_LIBRARY_SRC})
 
 set(ATHENA_LIBRARY_SRC src/athena/mimir_adapter/api/posix.cpp
-        include/athena/api/posix.h)
+        include/athena/api/posix.h src/athena/api/mpi.cpp include/athena/api/mpi.h src/athena/server/athena_server.cpp src/athena/server/athena_server.h src/athena/client/athena_client.cpp src/athena/client/athena_client.h src/athena/server/posix_io.cpp src/athena/server/posix_io.h)
 
 add_library(athena SHARED ${ATHENA_LIBRARY_SRC})
-target_link_libraries(athena ${PROJECT_NAME} -lstdc++fs -ldl)
+add_subdirectory(external/hcl)
+include_directories(external/hcl/include)
+find_package(thallium CONFIG REQUIRED)
+if (thallium_FOUND)
+    message(STATUS "found thallium for Athena at ${thallium_DIR}")
+endif ()
+find_package(MPI REQUIRED COMPONENTS CXX)
+if (MPI_FOUND)
+    message(STATUS "found mpi.h at ${MPI_CXX_INCLUDE_DIRS}")
+endif ()
+target_link_libraries(athena ${PROJECT_NAME} -lstdc++fs -ldl thallium ${MPI_CXX_LIBRARIES} hcl)
 target_compile_definitions(athena PUBLIC ATHENA_PRELOAD)
 
 

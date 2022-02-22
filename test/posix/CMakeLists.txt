@@ -15,7 +15,7 @@ function(gcc_athena example)
 endfunction()
 
 function(gcc_athena_test test_name test_tag)
-    add_test(NAME ${test_name} COMMAND "${CMAKE_BINARY_DIR}/test/posix/${example}" --durations yes --reporter compact --pfs ${PFS} --shm ${SHM} ${test_tag})
+    add_test(NAME ${test_name} COMMAND "${CMAKE_BINARY_DIR}/test/posix/pegasus" --durations yes --reporter compact --pfs ${PFS} --shm ${SHM} ${test_tag})
     set_property(TEST ${test_name} APPEND PROPERTY ENVIRONMENT LD_PRELOAD=${CMAKE_BINARY_DIR}/libathena.so)
 endfunction()
 
@@ -39,11 +39,10 @@ foreach (example ${examples})
 
 endforeach ()
 
-set(examples pegasus)
-foreach (example ${examples})
-    gcc_base(${example})
-    add_test(NAME test_${example}_write COMMAND "${CMAKE_BINARY_DIR}/test/posix/${example}" --durations yes --reporter compact --pfs ${PFS} --shm ${SHM} "[operation=write]")
-    add_test(NAME test_${example}_read COMMAND "${CMAKE_BINARY_DIR}/test/posix/${example}" --durations yes --reporter compact --pfs ${PFS} --shm ${SHM} "[operation=read]")
-    gcc_athena_test(test_${example}_athena_write "[operation=write]")
-    gcc_athena_test(test_${example}_athena_read "[operation=read]")
+
+gcc_base(pegasus)
+set(operations write read raw)
+foreach (operation ${operations})
+    add_test(NAME test_pegasus_${operation} COMMAND "${CMAKE_BINARY_DIR}/test/posix/pegasus" --durations yes --reporter compact --pfs ${PFS} --shm ${SHM} "[operation=${operation}]")
+    gcc_athena_test(test_pegasus_athena_${operation} "[operation=${operation}]")
 endforeach ()

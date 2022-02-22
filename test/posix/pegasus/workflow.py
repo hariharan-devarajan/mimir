@@ -107,6 +107,9 @@ class MimirWorkflow:
 
         path = self.mimir_bin
         filename = os.path.join(path, "pegasus")
+        raw = Transformation(
+            "pegasus_raw", site=exec_site_name, pfn=filename, is_stageable=False,
+        )
         write = Transformation(
             "pegasus_write", site=exec_site_name, pfn=filename, is_stageable=False,
         )
@@ -114,7 +117,7 @@ class MimirWorkflow:
             "pegasus_read", site=exec_site_name, pfn=filename, is_stageable=False,
         )
 
-        self.tc.add_transformations(write, read)
+        self.tc.add_transformations(raw, write, read)
 
     # --- Replica Catalog ------------------------------------------------------
     def create_replica_catalog(self):
@@ -129,22 +132,30 @@ class MimirWorkflow:
             if "ATHENA_LIB_PATH" not in os.environ:
                 raise Exception('ATHENA_LIB_PATH not set. Needs to point to libathena.so.')
             ld_preload = os.environ["ATHENA_LIB_PATH"]
-        # the split job that splits the webpage into smaller chunks
+
+        # RAW usecase no job dependency.
+        raw = (
+            Job("pegasus_raw")
+                .add_args("--durations", "yes", "--reporter", "compact",
+                          "--pfs", self.pfs, "--shm", self.shm, "--filename", "raw.dat", "[operation=raw]")
+                .add_profiles(Namespace.ENV, key="LD_PRELOAD", value=f"{ld_preload}")
+        )
+        # Read job depends on Write job.
         write = (
             Job("pegasus_write")
                 .add_args("--durations", "yes", "--reporter", "compact",
-                          "--pfs", self.pfs, "--shm", self.shm, "[operation=write]")
+                          "--pfs", self.pfs, "--shm", self.shm, "--filename", "write_job.dat", "[operation=write]")
                 .add_outputs(file_data, stage_out=False, register_replica=False)
                 .add_profiles(Namespace.ENV, key="LD_PRELOAD", value=f"{ld_preload}")
         )
         read = (
             Job("pegasus_read")
                 .add_args("--durations", "yes", "--reporter", "compact",
-                          "--pfs", self.pfs, "--shm", self.shm, "[operation=read]")
+                          "--pfs", self.pfs, "--shm", self.shm, "--filename", "write_job.dat", "[operation=read]")
                 .add_inputs(file_data)
                 .add_profiles(Namespace.ENV, key="LD_PRELOAD", value=f"{ld_preload}")
         )
-        self.wf.add_jobs(write, read)
+        self.wf.add_jobs(raw, write, read)
 
 
 if __name__ == "__main__":
