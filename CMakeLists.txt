@@ -40,10 +40,14 @@ set(MIMIR_LIBRARY_SRC include/mimir/mimir.h
         src/mimir/advice/advice_handler.h
         )
 
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DHCL_ENABLE_THALLIUM_TCP")
+message("HCL_ENABLE_THALLIUM_TCP: ${HCL_ENABLE_THALLIUM_TCP}")
+
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g")
 add_library(${PROJECT_NAME} SHARED ${MIMIR_LIBRARY_SRC})
 
 set(ATHENA_LIBRARY_SRC src/athena/mimir_adapter/api/posix.cpp
-        include/athena/api/posix.h src/athena/api/mpi.cpp include/athena/api/mpi.h src/athena/server/athena_server.cpp src/athena/server/athena_server.h src/athena/client/athena_client.cpp src/athena/client/athena_client.h src/athena/server/posix_io.cpp src/athena/server/posix_io.h)
+        include/athena/api/posix.h src/athena/api/mpi.cpp include/athena/api/mpi.h src/athena/server/athena_server.cpp src/athena/server/athena_server.h src/athena/client/athena_client.cpp src/athena/client/athena_client.h src/athena/server/posix_io.cpp src/athena/server/posix_io.h src/athena/api/interceptor.cpp)
 
 add_library(athena SHARED ${ATHENA_LIBRARY_SRC})
 add_subdirectory(external/hcl)

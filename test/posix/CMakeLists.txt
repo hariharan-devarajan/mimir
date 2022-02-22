@@ -19,6 +19,12 @@ function(gcc_athena_test test_name test_tag)
     set_property(TEST ${test_name} APPEND PROPERTY ENVIRONMENT LD_PRELOAD=${CMAKE_BINARY_DIR}/libathena.so)
 endfunction()
 
+function(mpi_athena_test test_name test_tag)
+    add_test(NAME ${test_name} COMMAND ${CMAKE_PREFIX_PATH}/bin/mpirun -n 4 ${CMAKE_BINARY_DIR}/test/posix/pegasus_mpi --durations yes --reporter compact --pfs ${PFS} --shm ${SHM} ${test_tag})
+    set_property(TEST ${test_name} APPEND PROPERTY ENVIRONMENT LD_PRELOAD=${CMAKE_BINARY_DIR}/libathena.so)
+    set_property(TEST ${test_name} APPEND PROPERTY ENVIRONMENT MPICH_DBG_LEVEL=VERBOSE)
+endfunction()
+
 
 foreach (example ${examples})
     gcc_base(${example})
@@ -39,10 +45,25 @@ foreach (example ${examples})
 
 endforeach ()
 
+macro(iteration example operations)
+    gcc_base(${example})
+    foreach (operation IN LISTS ${operations})
+        add_test(NAME test_${example}_${operation} COMMAND "${CMAKE_BINARY_DIR}/test/posix/${example}" --durations yes --reporter compact --pfs ${PFS} --shm ${SHM} "[operation=${operation}]")
+        gcc_athena_test(test_${example}_athena_${operation} "[operation=${operation}]")
+    endforeach ()
+endmacro()
 
-gcc_base(pegasus)
+macro(iteration_mpi example operations)
+    gcc_base(${example})
+    foreach (operation IN LISTS ${operations})
+        add_test(NAME test_${example}_${operation} COMMAND ${CMAKE_PREFIX_PATH}/bin/mpirun -n 4 ${CMAKE_BINARY_DIR}/test/posix/${example} --durations yes --reporter compact --pfs ${PFS} --shm ${SHM} "[operation=${operation}]")
+        mpi_athena_test(test_${example}_athena_${operation} "[operation=${operation}]")
+    endforeach ()
+endmacro()
+
+
 set(operations write read raw)
-foreach (operation ${operations})
-    add_test(NAME test_pegasus_${operation} COMMAND "${CMAKE_BINARY_DIR}/test/posix/pegasus" --durations yes --reporter compact --pfs ${PFS} --shm ${SHM} "[operation=${operation}]")
-    gcc_athena_test(test_pegasus_athena_${operation} "[operation=${operation}]")
-endforeach ()
+iteration(pegasus operations)
+
+set(operations write read raw raw_shared)
+iteration_mpi(pegasus_mpi operations)

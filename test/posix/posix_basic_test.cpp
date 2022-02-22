@@ -71,7 +71,7 @@ TEST_CASE("BatchedWriteSequential",
       REQUIRE(test::size_written_orig == args.request_size);
       fsync(test::fh_orig);
     }
-    new_file = GetFilenameFromFD(test::fh_orig);
+    new_file = test::GetFilenameFromFD(test::fh_orig);
     printf("I/O performed on file %s\n", new_file.c_str());
     test::test_close();
     REQUIRE(test::status_orig == 0);
@@ -91,7 +91,7 @@ TEST_CASE("BatchedWriteSequential",
       REQUIRE(test::size_written_orig == args.request_size);
       fsync(test::fh_orig);
     }
-    new_file = GetFilenameFromFD(test::fh_orig);
+    new_file = test::GetFilenameFromFD(test::fh_orig);
     printf("I/O performed on file %s\n", new_file.c_str());
     test::test_close();
     REQUIRE(test::status_orig == 0);

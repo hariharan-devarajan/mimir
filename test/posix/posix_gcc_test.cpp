@@ -69,16 +69,6 @@ int finalize() {
   return 0;
 }
 
-inline std::string GetFilenameFromFD(int fd) {
-  const int kMaxSize = 0xFFF;
-  char proclnk[kMaxSize];
-  char filename[kMaxSize];
-  snprintf(proclnk, kMaxSize, "/proc/self/fd/%d", fd);
-  size_t r = readlink(proclnk, filename, kMaxSize);
-  filename[r] = '\0';
-  return filename;
-}
-
 int pretest() {
   fs::create_directories(args.pfs);
   info.write_data = std::vector<char>(args.request_size, 'w');
@@ -199,6 +189,15 @@ cl::Parser define_options() {
 }
 
 namespace test {
+inline std::string GetFilenameFromFD(int fd) {
+  const int kMaxSize = 0xFFF;
+  char proclnk[kMaxSize];
+  char filename[kMaxSize];
+  snprintf(proclnk, kMaxSize, "/proc/self/fd/%d", fd);
+  size_t r = readlink(proclnk, filename, kMaxSize);
+  filename[r] = '\0';
+  return filename;
+}
 int fh_orig;
 int fh_cmp;
 int status_orig;

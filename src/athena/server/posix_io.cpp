@@ -22,10 +22,11 @@ int athena::posix_close(int fd) { return close(fd); }
 off_t athena::posix_lseek(int fd, off_t offset, int whence) {
   return posix_lseek(fd, offset, whence);
 }
-ssize_t athena::posix_write(int fd, std::string buf, int count) {
-  return write(fd, buf.data(), count);
+ssize_t athena::posix_write(int fd, std::string buf, size_t count) {
+  ssize_t ret = write(fd, buf.data(), count);
+  return ret;
 }
-std::string athena::posix_read(int fd, int count) {
+std::string athena::posix_read(int fd, size_t count) {
   std::string buf;
   buf.reserve(count);
   read(fd, buf.data(), count);
