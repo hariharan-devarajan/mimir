@@ -17,7 +17,7 @@ struct Arguments {
   fs::path shm = "/home/hariharan/temp/mimir/shm";
   std::string filename = "test.dat";
   size_t request_size = 65536;
-  size_t iteration = 8;
+  size_t iteration = 2;
   bool debug = false;
 };
 }  // namespace mimir::test
@@ -255,6 +255,10 @@ TEST_CASE("Read",
           "Timing rank %d: init %f, metadata %f, io %f, and finalize %f.\n",
           my_rank, initialization.getElapsedTime(), metadata.getElapsedTime(),
           io.getElapsedTime(), finalization.getElapsedTime());
+
+  if (fs::exists(filepath)) fs::remove(filepath);
+  filepath = args.shm / args.filename;
+  if (fs::exists(filepath)) fs::remove(filepath);
 }
 
 TEST_CASE("ReadAfterWrite",
@@ -366,6 +370,9 @@ TEST_CASE("ReadAfterWrite",
           "Timing rank %d: init %f, metadata %f, io %f, and finalize %f.\n",
           my_rank, initialization.getElapsedTime(), metadata.getElapsedTime(),
           io.getElapsedTime(), finalization.getElapsedTime());
+  if (fs::exists(filepath)) fs::remove(filepath);
+  filepath = args.shm / args.filename;
+  if (fs::exists(filepath)) fs::remove(filepath);
 }
 
 TEST_CASE("ReadAfterWriteShared",
@@ -469,4 +476,8 @@ TEST_CASE("ReadAfterWriteShared",
           "Timing rank %d: init %f, metadata %f, io %f, and finalize %f.\n",
           my_rank, initialization.getElapsedTime(), metadata.getElapsedTime(),
           io.getElapsedTime(), finalization.getElapsedTime());
+  if (fs::exists(my_io_filename)) fs::remove(my_io_filename);
+  my_io_filename = args.shm / (args.filename + "." + std::to_string(my_rank) +
+                               "." + std::to_string(comm_size));
+  if (fs::exists(my_io_filename)) fs::remove(my_io_filename);
 }
