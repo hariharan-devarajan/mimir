@@ -4,7 +4,7 @@ set(examples posix_gcc_test)
 
 function(gcc_base example)
     add_executable(${example} ${example}.cpp ${TEST_SRC})
-    target_link_libraries(${example} ${TEST_LIBS} mimir)
+    target_link_libraries(${example} ${TEST_LIBS} mimir -rdynamic)
 endfunction()
 
 function(gcc_athena example)
@@ -65,5 +65,5 @@ endmacro()
 set(operations write read raw)
 iteration(pegasus operations)
 
-set(operations write read raw raw_shared)
+set(operations write read raw raw_shared input)
 iteration_mpi(pegasus_mpi operations)

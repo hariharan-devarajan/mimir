@@ -85,7 +85,6 @@ class Client {
             _job_configuration_advice._rpc_port);
       }
     } else {
-      print_backtrace();
       throw std::runtime_error(
           "[ATHENA] Job Configuration Advice not set from Athena Client.");
     }

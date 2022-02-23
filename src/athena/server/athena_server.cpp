@@ -68,11 +68,15 @@ athena::Server::Server(bool is_mpi) : is_server(false) {
       std::function<ssize_t(int, DATA, size_t)> funcWrite =
           std::bind(&athena::posix_write, std::placeholders::_1,
                     std::placeholders::_2, std::placeholders::_3);
+
+      std::function<bool(DATA)> funcPrefetch =
+          std::bind(&athena::posix_prefetch, std::placeholders::_1);
       _rpc->bind("athena::posix::open", funcOpen);
       _rpc->bind("athena::posix::close", funcClose);
       _rpc->bind("athena::posix::lseek", funcSeek);
       _rpc->bind("athena::posix::write", funcWrite);
       _rpc->bind("athena::posix::read", funcRead);
+      _rpc->bind("athena::posix::prefetch", funcPrefetch);
     }
   } else {
     throw std::runtime_error(

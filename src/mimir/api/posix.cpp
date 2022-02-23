@@ -9,8 +9,15 @@
 #include <mimir/common/error_code.h>
 #include <mimir/constant.h>
 #include <mimir/log/logger.h>
+#include <mpi.h>
+#include <athena/api/interceptor.h>
+#include <athena/client/athena_client.h>
+#include <athena/server/posix_io.h>
+#include <dlfcn.h>
 
+MimirStatus file_prefetch(mimir::FileAdvice &advice) {}
 namespace mimir {
+
 MimirStatus file_advice_begin(FileAdvice &advice, MimirHandler &handler) {
   if (advice._type._primary != PrimaryAdviceType::DATA_FILE) {
     return MIMIR_ONLY_FILE_ALLOWED;
@@ -19,6 +26,16 @@ MimirStatus file_advice_begin(FileAdvice &advice, MimirHandler &handler) {
   std::hash<std::string> hash_str;
   key._id = hash_str(advice._name);
   AdviceHandler<FileAdvice>::Instance(advice._type)->save_advice(key, advice);
+  typedef MimirStatus (*real_t_file_prefetch_)(FileAdvice &);
+  auto ld_so = std::getenv("LD_PRELOAD");
+  auto handle = dlopen(ld_so, RTLD_GLOBAL | RTLD_LAZY);
+  real_t_file_prefetch_ derived_file_prefetch_ =
+      (real_t_file_prefetch_)dlsym(handle, "file_prefetch");
+  if (derived_file_prefetch_ == NULL) {
+    file_prefetch(advice);
+  } else {
+    derived_file_prefetch_(advice);
+  }
   handler._type = advice._type;
   handler._id = key._id;
   return MIMIR_SUCCESS;

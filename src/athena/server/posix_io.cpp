@@ -42,3 +42,14 @@ DATA athena::posix_read(int fd, size_t count) {
                                          data_str.size());
   return data_str;
 }
+bool athena::posix_prefetch(DATA filename) {
+  auto client = athena::Client::Instance();
+  fs::create_directories(
+      client->_job_configuration_advice._devices[0]._mount_point);
+  fs::path new_path =
+      client->_job_configuration_advice._devices[0]._mount_point /
+      fs::path(filename.data()).filename();
+  if (fs::exists(filename.data()))
+    fs::copy(filename.data(), new_path, fs::copy_options::update_existing);
+  return true;
+}

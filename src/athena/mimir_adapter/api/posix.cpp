@@ -20,6 +20,43 @@
 #include "athena/server/posix_io.h"
 
 namespace fs = std::experimental::filesystem;
+MimirStatus file_prefetch(mimir::FileAdvice &advice) {
+  if (advice._type._primary != mimir::PrimaryAdviceType::DATA_FILE) {
+    return mimir::MIMIR_ONLY_FILE_ALLOWED;
+  }
+  mimir::Logger::Instance("ATHENA")->log(mimir::LOG_ERROR,
+                                         "Prefetch in Athena");
+  mimir::MimirKey key;
+  std::hash<std::string> hash_str;
+  key._id = hash_str(advice._name);
+  switch (advice._type._secondary) {
+    case mimir::OperationAdviceType::INPUT_FILE: {
+      auto client = athena::Client::Instance();
+      int current_rank = 0;
+      uint16_t my_server_index = 0;
+      MPI_Comm_rank(MPI_COMM_WORLD, &current_rank);
+      my_server_index = ceil(
+          current_rank / client->_job_configuration_advice._num_cores_per_node);
+      auto dest_server = key._id % client->_job_configuration_advice._num_nodes;
+      bool status = false;
+      if (my_server_index != dest_server) {
+        status =
+            client->_rpc
+                ->call<RPCLIB_MSGPACK::object_handle>(
+                    dest_server, "athena::posix::prefetch", advice._name.data())
+                .as<bool>();
+      } else {
+        status = athena::posix_prefetch(advice._name.data());
+      }
+      if (status) {
+        mimir::Logger::Instance("ATHENA")->log(
+            mimir::LoggerType::LOG_ERROR, " Prefetch on file %s successful.",
+            advice._name.data());
+      }
+    }
+  }
+}
+
 int ATHENA_DECL(open64)(const char *path, int flags, ...) {
   int ret;
   va_list arg;
@@ -195,6 +232,31 @@ int ATHENA_DECL(open64)(const char *path, int flags, ...) {
               }
               case mimir::OperationAdviceType::INPUT_FILE: {
                 /** perform prefetching on input files **/
+                mimir::Logger::Instance("ATHENA")->log(
+                    mimir::LOG_INFO, "Applying shared file advice for file %s",
+                    path);
+                server_index = std::hash<std::string>()(filename) %
+                               client->_job_configuration_advice._num_nodes;
+
+                if (my_server_index != server_index) {
+                  mimir::Logger::Instance("ATHENA")->log(
+                      mimir::LOG_INFO,
+                      "Perform RPC on server %d open for file %s", server_index,
+                      path);
+                  auto rpc_ret =
+                      client->_rpc->call<RPCLIB_MSGPACK::object_handle>(
+                          server_index, "athena::posix::open", filename, flags,
+                          mode);
+                  ret = rpc_ret.as<int>();
+                  perform_io = false;
+                } else {
+                  mimir::Logger::Instance("ATHENA")->log(
+                      mimir::LOG_INFO, "Perform Local open for file %s", path);
+                  mimir::Storage device;
+                  device = client->_job_configuration_advice._devices[0];
+                  filename.replace(0, advice._device._mount_point.size(),
+                                   device._mount_point);
+                }
                 break;
               }
               case mimir::OperationAdviceType::OUTPUT_FILE: {

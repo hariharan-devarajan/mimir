@@ -59,10 +59,9 @@ if (MPI_FOUND)
     message(STATUS "found mpi.h at ${MPI_CXX_INCLUDE_DIRS}")
 endif ()
 include_directories(${Boost_INCLUDE_DIRS})
-target_link_libraries(athena ${PROJECT_NAME} -lstdc++fs -ldl -lrpc thallium ${MPI_CXX_LIBRARIES} hcl ${Boost_LIBRARIES})
+target_link_libraries(athena ${PROJECT_NAME} -lstdc++fs -ldl -fPIC -rdynamic -lrpc thallium ${MPI_CXX_LIBRARIES} hcl ${Boost_LIBRARIES})
 target_compile_definitions(athena PUBLIC ATHENA_PRELOAD)
-
-
+target_link_libraries(${PROJECT_NAME} -ldl)
 set_target_properties(${PROJECT_NAME} PROPERTIES
         VERSION ${PROJECT_VERSION}
         SOVERSION 1

@@ -14,6 +14,7 @@
 
 #include <cstdarg>
 
+MimirStatus file_prefetch(mimir::FileAdvice &payload);
 namespace mimir {
 MimirStatus file_advice_begin(FileAdvice &payload, MimirHandler &handler);
 MimirStatus operation_advice_begin(POSIXFileOperationAdvice &payload,
