@@ -13,6 +13,23 @@ void mimir::Logger::log(LoggerType type, char* string, ...) {
   va_start(args, string);
   char buffer[256];
   int result = vsprintf(buffer, string, args);
-  fprintf(stdout, "[%s] %s\n", _app_name.c_str(), buffer);
+  switch (type) {
+    case LoggerType::LOG_INFO: {
+      if (level >= LoggerType::LOG_INFO)
+        fprintf(stdout, "[%s INFO]: %s\n", _app_name.c_str(), buffer);
+      break;
+    }
+    case LoggerType::LOG_WARN: {
+      if (level >= LoggerType::LOG_WARN)
+        fprintf(stdout, "[%s WARN]: %s\n", _app_name.c_str(), buffer);
+      break;
+    }
+    case LoggerType::LOG_ERROR: {
+      if (level >= LoggerType::LOG_ERROR)
+        fprintf(stderr, "[%s ERROR]: %s\n", _app_name.c_str(), buffer);
+      break;
+    }
+  }
+
   va_end(args);
 }

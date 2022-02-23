@@ -17,6 +17,7 @@
 #include <experimental/filesystem>
 
 #include "athena/client/athena_client.h"
+#include "athena/server/posix_io.h"
 
 namespace fs = std::experimental::filesystem;
 int ATHENA_DECL(open64)(const char *path, int flags, ...) {
@@ -120,9 +121,11 @@ int ATHENA_DECL(open64)(const char *path, int flags, ...) {
                       mimir::LOG_INFO,
                       "Perform RPC on server %d open for file %s", server_index,
                       path);
-                  ret = client->_rpc->call<int>(server_index,
-                                                "athena::posix::open", filename,
-                                                flags, mode);
+                  auto rpc_ret =
+                      client->_rpc->call<RPCLIB_MSGPACK::object_handle>(
+                          server_index, "athena::posix::open", filename, flags,
+                          mode);
+                  ret = rpc_ret.as<int>();
                   perform_io = false;
                 } else {
                   mimir::Logger::Instance("ATHENA")->log(
@@ -285,17 +288,18 @@ ssize_t ATHENA_DECL(read)(int fd, void *buf, size_t count) {
         uint16_t my_server_index =
             ceil(current_rank /
                  client->_job_configuration_advice._num_cores_per_node);
-        // FIXME: if (my_server_index != file_server_index) {
-        mimir::Logger::Instance("ATHENA")->log(
-            mimir::LOG_INFO,
-            "Perform RPC on server %d read for file_descriptor %d",
-            file_server_index, fd);
-        auto data = client->_rpc->call<std::vector<char>>(
-            file_server_index, "athena::posix::read", fd, count);
-        memcpy(buf, data.data(), count);
-        ret = count;
-        perform_io = false;
-        // }
+        if (my_server_index != file_server_index) {
+          mimir::Logger::Instance("ATHENA")->log(
+              mimir::LOG_INFO,
+              "Perform RPC on server %d read for file_descriptor %d",
+              file_server_index, fd);
+          auto rpc_ret = client->_rpc->call<RPCLIB_MSGPACK::object_handle>(
+              file_server_index, "athena::posix::read", fd, count);
+          auto data = rpc_ret.as<DATA>();
+          memcpy(buf, data.data(), count);
+          ret = data.size();
+          perform_io = false;
+        }
       }
     }
   }
@@ -332,19 +336,22 @@ ssize_t ATHENA_DECL(write)(int fd, const void *buf, size_t count) {
         my_server_index =
             ceil(current_rank /
                  client->_job_configuration_advice._num_cores_per_node);
-        // FIXME: if (my_server_index != file_server_index) {
-        ret = client->_rpc->call<ssize_t>(file_server_index,
-                                          "athena::posix::write", fd,
-                                          std::string((char *)buf), count);
-        mimir::Logger::Instance("ATHENA")->log(
-            mimir::LOG_INFO,
-            "Perform RPC on server %d from rank %d with server_index %d "
-            "write for file_descriptor "
-            "%d and ret "
-            "%d",
-            file_server_index, current_rank, my_server_index, fd, ret);
-        perform_io = false;
-        // }
+        if (my_server_index != file_server_index) {
+          DATA buf_data = DATA((char *)buf, count);
+          ret = client->_rpc
+                    ->call<RPCLIB_MSGPACK::object_handle>(
+                        file_server_index, "athena::posix::write", fd, buf_data,
+                        count)
+                    .as<ssize_t>();
+          mimir::Logger::Instance("ATHENA")->log(
+              mimir::LOG_INFO,
+              "Perform RPC on server %d from rank %d with server_index %d "
+              "write for file_descriptor "
+              "%d and ret "
+              "%d",
+              file_server_index, current_rank, my_server_index, fd, ret);
+          perform_io = false;
+        }
       }
     }
   }
@@ -387,8 +394,10 @@ int ATHENA_DECL(close)(int fd) {
               mimir::LOG_INFO,
               "Perform RPC on server %d close for file_descriptor %d",
               file_server_index, fd);
-          ret = client->_rpc->call<int>(file_server_index,
-                                        "athena::posix::close", fd);
+          ret = client->_rpc
+                    ->call<RPCLIB_MSGPACK::object_handle>(
+                        file_server_index, "athena::posix::close", fd)
+                    .as<int>();
           perform_io = false;
         }
       }
@@ -417,8 +426,11 @@ off64_t ATHENA_DECL(lseek64)(int fd, off64_t offset, int whence) {
             ceil(current_rank /
                  client->_job_configuration_advice._num_cores_per_node);
         if (my_server_index != file_server_index) {
-          ret = client->_rpc->call<int>(
-              file_server_index, "athena::posix::lseek", fd, offset, whence);
+          ret = client->_rpc
+                    ->call<RPCLIB_MSGPACK::object_handle>(
+                        file_server_index, "athena::posix::lseek", fd, offset,
+                        whence)
+                    .as<int>();
           mimir::Logger::Instance("ATHENA")->log(
               mimir::LOG_INFO,
               "Perform RPC on server %d close for file_descriptor %d and ret "

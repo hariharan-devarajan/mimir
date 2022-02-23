@@ -20,14 +20,6 @@
 
 std::shared_ptr<athena::Server> athena::Server::instance = nullptr;
 namespace athena {
-THALLIUM_DEFINE(posix_open, (filename, mode, flags), std::vector<char> filename,
-                int mode, int flags);
-THALLIUM_DEFINE(posix_close, (fd), int fd);
-THALLIUM_DEFINE(posix_lseek, (fd, offset, whence), int fd, off_t offset,
-                int whence);
-THALLIUM_DEFINE(posix_write, (fd, buf, count), int fd, std::vector<char> &buf,
-                size_t count);
-THALLIUM_DEFINE(posix_read, (fd, count), int fd, size_t count);
 }  // namespace athena
 athena::Server::Server(bool is_mpi) : is_server(false) {
   auto job_conf_type =
@@ -63,26 +55,19 @@ athena::Server::Server(bool is_mpi) : is_server(false) {
 
       _rpc = hcl::Singleton<RPCFactory>::GetInstance()->GetRPC(
           _job_configuration_advice._rpc_port);
-      std::function<void(const thallium::request &, std::vector<char> &, int,
-                         int)>
-          funcOpen = std::bind(&athena::Thalliumposix_open,
-                               std::placeholders::_1, std::placeholders::_2,
-                               std::placeholders::_3, std::placeholders::_4);
-      std::function<void(const thallium::request &, int)> funcClose =
-          std::bind(&athena::Thalliumposix_close, std::placeholders::_1,
-                    std::placeholders::_2);
-      std::function<void(const thallium::request &, int, int, int)> funcSeek =
-          std::bind(&athena::Thalliumposix_lseek, std::placeholders::_1,
-                    std::placeholders::_2, std::placeholders::_3,
-                    std::placeholders::_4);
-      std::function<void(const thallium::request &, int, size_t)> funcRead =
-          std::bind(&athena::Thalliumposix_read, std::placeholders::_1,
+      std::function<int(DATA, int, int)> funcOpen =
+          std::bind(&athena::posix_open, std::placeholders::_1,
                     std::placeholders::_2, std::placeholders::_3);
-      std::function<void(const thallium::request &, int, std::vector<char> &,
-                         size_t)>
-          funcWrite = std::bind(&athena::Thalliumposix_write,
-                                std::placeholders::_1, std::placeholders::_2,
-                                std::placeholders::_3, std::placeholders::_4);
+      std::function<int(int)> funcClose =
+          std::bind(&athena::posix_close, std::placeholders::_1);
+      std::function<off_t(int, int, int)> funcSeek =
+          std::bind(&athena::posix_lseek, std::placeholders::_1,
+                    std::placeholders::_2, std::placeholders::_3);
+      std::function<DATA(int, size_t)> funcRead = std::bind(
+          &athena::posix_read, std::placeholders::_1, std::placeholders::_2);
+      std::function<ssize_t(int, DATA, size_t)> funcWrite =
+          std::bind(&athena::posix_write, std::placeholders::_1,
+                    std::placeholders::_2, std::placeholders::_3);
       _rpc->bind("athena::posix::open", funcOpen);
       _rpc->bind("athena::posix::close", funcClose);
       _rpc->bind("athena::posix::lseek", funcSeek);

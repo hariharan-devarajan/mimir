@@ -16,7 +16,7 @@
 
 namespace fs = std::experimental::filesystem;
 
-int athena::posix_open(std::vector<char> path, int flags, int mode) {
+int athena::posix_open(DATA path, int flags, int mode) {
   int ret = open(path.data(), flags, mode);
   return ret;
 }
@@ -28,12 +28,17 @@ off_t athena::posix_lseek(int fd, off_t offset, int whence) {
   off_t ret = lseek(fd, offset, whence);
   return ret;
 }
-ssize_t athena::posix_write(int fd, std::vector<char> buf, size_t count) {
+ssize_t athena::posix_write(int fd, DATA buf, size_t count) {
   ssize_t ret = write(fd, buf.data(), count);
   return ret;
 }
-std::vector<char> athena::posix_read(int fd, size_t count) {
-  std::vector<char> data('r', count);
-  ssize_t ret = read(fd, data.data(), count);
-  return data;
+DATA athena::posix_read(int fd, size_t count) {
+  DATA data_str;
+  char* data = (char*)malloc(count);
+  ssize_t ret = read(fd, data, count);
+  data_str.assign(data, ret);
+  free(data);
+  mimir::Logger::Instance("ATHENA")->log(mimir::LOG_INFO, "read data size %d",
+                                         data_str.size());
+  return data_str;
 }
