@@ -69,19 +69,21 @@ class Client {
       else
         current_rank = 0;
       // node server rank
-      uint16_t my_server_index =
-          ceil(current_rank / _job_configuration_advice._num_cores_per_node);
-      HCL_CONF->IS_SERVER = false;
-      HCL_CONF->MY_SERVER = my_server_index;
-      HCL_CONF->NUM_SERVERS = _job_configuration_advice._num_nodes;
-      HCL_CONF->SERVER_ON_NODE = true;
-      for (auto &&server_name : _job_configuration_advice._node_names) {
-        HCL_CONF->SERVER_LIST.emplace_back(server_name);
+      if (is_mpi) {
+        uint16_t my_server_index =
+            ceil(current_rank / _job_configuration_advice._num_cores_per_node);
+        HCL_CONF->IS_SERVER = false;
+        HCL_CONF->MY_SERVER = my_server_index;
+        HCL_CONF->NUM_SERVERS = _job_configuration_advice._num_nodes;
+        HCL_CONF->SERVER_ON_NODE = true;
+        for (auto &&server_name : _job_configuration_advice._node_names) {
+          HCL_CONF->SERVER_LIST.emplace_back(server_name);
+        }
+        HCL_CONF->RPC_PORT = _job_configuration_advice._rpc_port;
+        HCL_CONF->RPC_THREADS = _job_configuration_advice._rpc_threads;
+        _rpc = hcl::Singleton<RPCFactory>::GetInstance()->GetRPC(
+            _job_configuration_advice._rpc_port);
       }
-      HCL_CONF->RPC_PORT = _job_configuration_advice._rpc_port;
-      HCL_CONF->RPC_THREADS = _job_configuration_advice._rpc_threads;
-      _rpc = hcl::Singleton<RPCFactory>::GetInstance()->GetRPC(
-          _job_configuration_advice._rpc_port);
     } else {
       print_backtrace();
       throw std::runtime_error(

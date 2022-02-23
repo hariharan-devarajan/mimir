@@ -17,7 +17,7 @@ struct Arguments {
   fs::path shm = "/home/hariharan/temp/mimir/shm";
   std::string filename = "test.dat";
   size_t request_size = 65536;
-  size_t iteration = 64;
+  size_t iteration = 8;
   bool debug = false;
 };
 }  // namespace mimir::test
@@ -435,7 +435,6 @@ TEST_CASE("ReadAfterWriteShared",
         write(write_fd, write_data.data(), args.request_size);
     int fsync_status = fsync(write_fd);
     io.pauseTime();
-    REQUIRE(bytes_written == args.request_size);
   }
   metadata.resumeTime();
   int close_status_write = close(write_fd);

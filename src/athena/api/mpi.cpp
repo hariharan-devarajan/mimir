@@ -12,10 +12,12 @@
 /**
  * MPI
  */
+
 int ATHENA_DECL(MPI_Init)(int *argc, char ***argv) {
   MAP_OR_FAIL(MPI_Init);
   int status = real_MPI_Init_(argc, argv);
   if (status == 0) {
+    set_mpi();
     mimir::Logger::Instance("ATHENA")->log(mimir::LOG_INFO,
                                            "Intercepting MPI_Init");
     athena::Server::Instance(true);

@@ -12,7 +12,8 @@
 #ifdef ATHENA_PRELOAD
 
 void OnExit(void);
-
+extern bool is_mpi();
+extern void set_mpi();
 extern const char* kPathExclusions[15];
 extern const char* kExtensionExclusions[1];
 extern std::vector<std::string> track_files;

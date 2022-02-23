@@ -48,7 +48,7 @@ int ATHENA_DECL(open64)(const char *path, int flags, ...) {
       job_conf_key._id = 0;
 
       int current_rank;
-      MPI_Comm_rank(MPI_COMM_WORLD, &current_rank);
+      if (is_mpi()) MPI_Comm_rank(MPI_COMM_WORLD, &current_rank);
       uint16_t my_server_index = ceil(
           current_rank / client->_job_configuration_advice._num_cores_per_node);
       uint16_t server_index = my_server_index;
@@ -283,8 +283,8 @@ ssize_t ATHENA_DECL(read)(int fd, void *buf, size_t count) {
       auto iter = client->_fd_server.find(fd);
       if (iter != client->_fd_server.end()) {
         auto file_server_index = iter->second;
-        int current_rank;
-        MPI_Comm_rank(MPI_COMM_WORLD, &current_rank);
+        int current_rank = 0;
+        if (is_mpi()) MPI_Comm_rank(MPI_COMM_WORLD, &current_rank);
         uint16_t my_server_index =
             ceil(current_rank /
                  client->_job_configuration_advice._num_cores_per_node);
@@ -325,7 +325,7 @@ ssize_t ATHENA_DECL(write)(int fd, const void *buf, size_t count) {
   int current_rank = 0;
   uint16_t my_server_index = 0;
   if (IsTracked(fd)) {
-    MPI_Comm_rank(MPI_COMM_WORLD, &current_rank);
+    if (is_mpi()) MPI_Comm_rank(MPI_COMM_WORLD, &current_rank);
     is_tracked = true;
     auto client = athena::Client::Instance();
     if (client != nullptr) {
@@ -385,7 +385,7 @@ int ATHENA_DECL(close)(int fd) {
       if (iter != client->_fd_server.end()) {
         auto file_server_index = iter->second;
         int current_rank;
-        MPI_Comm_rank(MPI_COMM_WORLD, &current_rank);
+        if (is_mpi()) MPI_Comm_rank(MPI_COMM_WORLD, &current_rank);
         uint16_t my_server_index =
             ceil(current_rank /
                  client->_job_configuration_advice._num_cores_per_node);
@@ -421,7 +421,7 @@ off64_t ATHENA_DECL(lseek64)(int fd, off64_t offset, int whence) {
       if (iter != client->_fd_server.end()) {
         auto file_server_index = iter->second;
         int current_rank;
-        MPI_Comm_rank(MPI_COMM_WORLD, &current_rank);
+        if (is_mpi()) MPI_Comm_rank(MPI_COMM_WORLD, &current_rank);
         uint16_t my_server_index =
             ceil(current_rank /
                  client->_job_configuration_advice._num_cores_per_node);
