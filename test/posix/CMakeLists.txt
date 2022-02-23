@@ -65,5 +65,5 @@ endmacro()
 set(operations write read raw)
 iteration(pegasus operations)
 
-set(operations write read raw raw_shared input)
+set(operations write read raw raw_shared input read_only)
 iteration_mpi(pegasus_mpi operations)

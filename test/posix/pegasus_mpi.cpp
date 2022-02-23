@@ -19,7 +19,7 @@ struct Arguments {
   std::string filename = "test.dat";
   size_t request_size = 65536;
   size_t iteration = 2;
-  bool debug = true;
+  bool debug = false;
 };
 }  // namespace mimir::test
 
@@ -490,7 +490,7 @@ TEST_CASE("ReadAfterWriteShared",
   if (fs::exists(my_io_filename)) fs::remove(my_io_filename);
 }
 
-TEST_CASE("OnlyRead",
+TEST_CASE("OnlyReadInputFiles",
           "[operation=input]"
           "[request_size=" +
               std::to_string(args.request_size) +
@@ -506,12 +506,21 @@ TEST_CASE("OnlyRead",
   auto my_io_filename =
       args.pfs / (args.filename + "." + std::to_string(my_rank) + "." +
                   std::to_string(comm_size));
-  std::string cmd = "{ tr -dc '[:alnum:]' < /dev/urandom | head -c " +
-                    std::to_string(args.request_size * args.iteration) +
-                    "; } > " + my_io_filename.c_str() + " 2> /dev/null";
-  int status = system(cmd.c_str());
-  mimir::Logger::Instance("PEGASUS_TEST")
-      ->log(mimir::LOG_ERROR, "written file %s", my_io_filename.c_str());
+  fs::create_directories(args.pfs);
+  if (my_rank == 0) {
+    for (int i = 0; i < comm_size; ++i) {
+      auto filename = args.pfs / (args.filename + "." + std::to_string(i) +
+                                  "." + std::to_string(comm_size));
+      std::string cmd = "{ tr -dc '[:alnum:]' < /dev/urandom | head -c " +
+                        std::to_string(args.request_size * args.iteration) +
+                        "; } > " + filename.c_str() + " ";
+      int status = system(cmd.c_str());
+      if (fs::exists(filename)) {
+        mimir::Logger::Instance("PEGASUS_TEST")
+            ->log(mimir::LOG_INFO, "written file %s", my_io_filename.c_str());
+      }
+    }
+  }
   MPI_Barrier(MPI_COMM_WORLD);
   using namespace mimir;
   MimirHandler file_handler;
@@ -535,10 +544,110 @@ TEST_CASE("OnlyRead",
   file_advice._io_amount_mb = args.request_size * args.iteration * 2 / MB;
   file_advice._format = Format::FORMAT_BINARY;
   file_advice._priority = 100;
-  file_advice._name = my_io_filename;
-  file_advice_begin(file_advice, file_handler);
+  for (int i = 0; i < comm_size; ++i) {
+    auto filename = args.pfs / (args.filename + "." + std::to_string(i) + "." +
+                                std::to_string(comm_size));
+    file_advice._name = filename;
+    file_advice_begin(file_advice, file_handler);
+  }
 
+  /** Prepare data **/
+  auto read_data = std::vector<char>(args.request_size, 'r');
+  initialization.pauseTime();
+  /* Computation */
+  compute.resumeTime();
+  sleep(5);
+  compute.pauseTime();
+
+  /* Read I/O */
+  metadata.resumeTime();
+  int read_fd = open(my_io_filename.c_str(), O_RDONLY);
+  metadata.pauseTime();
+  REQUIRE(read_fd != -1);
+
+  for (size_t i = 0; i < args.iteration; ++i) {
+    io.resumeTime();
+    ssize_t bytes_read = read(read_fd, read_data.data(), args.request_size);
+    int fsync_status = fsync(read_fd);
+    io.pauseTime();
+    REQUIRE(bytes_read == args.request_size);
+  }
+
+  metadata.resumeTime();
+  int close_status = close(read_fd);
+  metadata.pauseTime();
+  REQUIRE(close_status == 0);
+
+  file_advice_end(file_handler);
+  fprintf(stdout,
+          "Timing rank %d: init %f, metadata %f, io %f, compute %f, and "
+          "finalize %f.\n",
+          my_rank, initialization.getElapsedTime(), metadata.getElapsedTime(),
+          io.getElapsedTime(), compute.getElapsedTime(),
+          finalization.getElapsedTime());
+}
+
+TEST_CASE("ReadOnly",
+          "[operation=read_only]"
+          "[request_size=" +
+              std::to_string(args.request_size) +
+              "]"
+              "[iteration=" +
+              std::to_string(args.iteration) + "]") {
+  Timer initialization, metadata, io, finalization, compute;
+
+  initialization.resumeTime();
+  int my_rank, comm_size;
+  MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &comm_size);
+  auto my_io_filename =
+      args.pfs / (args.filename + "." + std::to_string(my_rank) + "." +
+                  std::to_string(comm_size));
   fs::create_directories(args.pfs);
+  if (my_rank == 0) {
+    for (int i = 0; i < comm_size; ++i) {
+      auto filename = args.pfs / (args.filename + "." + std::to_string(i) +
+                                  "." + std::to_string(comm_size));
+      std::string cmd = "{ tr -dc '[:alnum:]' < /dev/urandom | head -c " +
+                        std::to_string(args.request_size * args.iteration) +
+                        "; } > " + filename.c_str() + " ";
+      int status = system(cmd.c_str());
+      if (fs::exists(filename)) {
+        mimir::Logger::Instance("PEGASUS_TEST")
+            ->log(mimir::LOG_INFO, "written file %s", my_io_filename.c_str());
+      }
+    }
+  }
+  MPI_Barrier(MPI_COMM_WORLD);
+  using namespace mimir;
+  MimirHandler file_handler;
+  FileAdvice file_advice;
+  file_advice._type._secondary = OperationAdviceType::READ_ONLY_FILE;
+  file_advice._per_io_data = args.iteration / (args.iteration * 2 + 4);
+  file_advice._per_io_metadata = 4 / (args.iteration * 2 + 4);
+  file_advice._size_mb = args.request_size * args.iteration / MB;
+  file_advice._device = Storage(args.pfs, 128);
+
+  if (args.request_size >= 0 && args.request_size < 4 * KB)
+    file_advice._write_distribution._0_4kb = 1.0;
+  else if (args.request_size >= 4 * KB && args.request_size < 64 * KB)
+    file_advice._write_distribution._4_64kb = 1.0;
+  if (args.request_size >= 64 * KB && args.request_size < 1 * MB)
+    file_advice._write_distribution._64kb_1mb = 1.0;
+  if (args.request_size >= 1 * MB && args.request_size < 16 * MB)
+    file_advice._write_distribution._1mb_16mb = 1.0;
+  if (args.request_size >= 16 * MB) file_advice._write_distribution._16mb = 1.0;
+
+  file_advice._io_amount_mb = args.request_size * args.iteration * 2 / MB;
+  file_advice._format = Format::FORMAT_BINARY;
+  file_advice._priority = 100;
+  for (int i = 0; i < comm_size; ++i) {
+    auto filename = args.pfs / (args.filename + "." + std::to_string(i) + "." +
+                                std::to_string(comm_size));
+    file_advice._name = filename;
+    file_advice_begin(file_advice, file_handler);
+  }
+
   /** Prepare data **/
   auto read_data = std::vector<char>(args.request_size, 'r');
   initialization.pauseTime();

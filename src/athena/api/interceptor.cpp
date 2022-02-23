@@ -14,10 +14,7 @@ extern std::vector<std::string> track_files = std::vector<std::string>();
 
 namespace athena {
 bool exit = false;
-bool is_mpi = false;
 }  // namespace athena
-extern bool is_mpi() { return athena::is_mpi; }
-extern void set_mpi() { athena::is_mpi = true; }
 void OnExit(void) { athena::exit = true; }
 
 bool IsTracked(std::string path) {

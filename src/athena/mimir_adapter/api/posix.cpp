@@ -24,8 +24,6 @@ MimirStatus file_prefetch(mimir::FileAdvice &advice) {
   if (advice._type._primary != mimir::PrimaryAdviceType::DATA_FILE) {
     return mimir::MIMIR_ONLY_FILE_ALLOWED;
   }
-  mimir::Logger::Instance("ATHENA")->log(mimir::LOG_ERROR,
-                                         "Prefetch in Athena");
   mimir::MimirKey key;
   std::hash<std::string> hash_str;
   key._id = hash_str(advice._name);
@@ -40,17 +38,23 @@ MimirStatus file_prefetch(mimir::FileAdvice &advice) {
       auto dest_server = key._id % client->_job_configuration_advice._num_nodes;
       bool status = false;
       if (my_server_index != dest_server) {
+        mimir::Logger::Instance("ATHENA")->log(
+            mimir::LOG_INFO, "Prefetch of file %s in Athena on server %d",
+            advice._name.data(), dest_server);
         status =
             client->_rpc
                 ->call<RPCLIB_MSGPACK::object_handle>(
                     dest_server, "athena::posix::prefetch", advice._name.data())
                 .as<bool>();
       } else {
+        mimir::Logger::Instance("ATHENA")->log(
+            mimir::LOG_INFO, "Prefetch of file %s in Athena on local server %d",
+            advice._name.data(), dest_server);
         status = athena::posix_prefetch(advice._name.data());
       }
       if (status) {
         mimir::Logger::Instance("ATHENA")->log(
-            mimir::LoggerType::LOG_ERROR, " Prefetch on file %s successful.",
+            mimir::LoggerType::LOG_INFO, " Prefetch on file %s successful.",
             advice._name.data());
       }
     }
@@ -227,14 +231,17 @@ int ATHENA_DECL(open64)(const char *path, int flags, ...) {
                 break;
               }
               case mimir::OperationAdviceType::READ_ONLY_FILE: {
-                /** perform prefetching **/
-                break;
+                mimir::Logger::Instance("ATHENA")->log(
+                    mimir::LOG_INFO,
+                    "Applying read-only file advice for file %s", path);
               }
               case mimir::OperationAdviceType::INPUT_FILE: {
                 /** perform prefetching on input files **/
-                mimir::Logger::Instance("ATHENA")->log(
-                    mimir::LOG_INFO, "Applying shared file advice for file %s",
-                    path);
+                if (advice._type._secondary ==
+                    mimir::OperationAdviceType::INPUT_FILE)
+                  mimir::Logger::Instance("ATHENA")->log(
+                      mimir::LOG_INFO, "Applying input file advice for file %s",
+                      path);
                 server_index = std::hash<std::string>()(filename) %
                                client->_job_configuration_advice._num_nodes;
 

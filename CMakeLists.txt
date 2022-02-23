@@ -38,7 +38,7 @@ set(MIMIR_LIBRARY_SRC include/mimir/mimir.h
         include/mimir/api/job_configuration.h
         src/mimir/advice/advice.cpp
         src/mimir/advice/advice_handler.h
-        )
+        include/mimir/api/mimir_interceptor.h src/mimir/api/mimir_interceptor.cpp)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DHCL_ENABLE_RPCLIB")
 message("HCL_ENABLE_RPCLIB: ${HCL_ENABLE_RPCLIB}")
@@ -61,7 +61,7 @@ endif ()
 include_directories(${Boost_INCLUDE_DIRS})
 target_link_libraries(athena ${PROJECT_NAME} -lstdc++fs -ldl -fPIC -rdynamic -lrpc thallium ${MPI_CXX_LIBRARIES} hcl ${Boost_LIBRARIES})
 target_compile_definitions(athena PUBLIC ATHENA_PRELOAD)
-target_link_libraries(${PROJECT_NAME} -ldl)
+target_link_libraries(${PROJECT_NAME} -ldl ${MPI_CXX_LIBRARIES})
 set_target_properties(${PROJECT_NAME} PROPERTIES
         VERSION ${PROJECT_VERSION}
         SOVERSION 1

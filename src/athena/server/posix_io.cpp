@@ -49,7 +49,11 @@ bool athena::posix_prefetch(DATA filename) {
   fs::path new_path =
       client->_job_configuration_advice._devices[0]._mount_point /
       fs::path(filename.data()).filename();
-  if (fs::exists(filename.data()))
+  if (fs::exists(filename.data())) {
+    mimir::Logger::Instance("ATHENA")->log(mimir::LOG_INFO,
+                                           "Copying file %s into file %s",
+                                           filename.data(), new_path.c_str());
     fs::copy(filename.data(), new_path, fs::copy_options::update_existing);
+  }
   return true;
 }
