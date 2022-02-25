@@ -47,7 +47,7 @@ athena::Server::Server(bool is_mpi) : is_server(false) {
   if (current_rank % _job_configuration_advice._num_cores_per_node == 0) {
     // node server rank
     uint16_t my_server_index =
-        ceil(current_rank / _job_configuration_advice._num_cores_per_node);
+        floor(current_rank / _job_configuration_advice._num_cores_per_node);
     is_server = true;
     HCL_CONF->IS_SERVER = is_server;
     HCL_CONF->MY_SERVER = my_server_index;

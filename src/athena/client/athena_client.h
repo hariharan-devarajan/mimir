@@ -63,7 +63,7 @@ class Client {
       current_rank = 0;
     // node server rank
     uint16_t my_server_index =
-        ceil(current_rank / _job_configuration_advice._num_cores_per_node);
+        floor(current_rank / _job_configuration_advice._num_cores_per_node);
     HCL_CONF->IS_SERVER = false;
     HCL_CONF->MY_SERVER = my_server_index;
     HCL_CONF->NUM_SERVERS = _job_configuration_advice._num_nodes;

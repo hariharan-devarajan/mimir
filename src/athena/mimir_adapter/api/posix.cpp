@@ -33,7 +33,7 @@ MimirStatus file_prefetch(mimir::FileAdvice &advice) {
       int current_rank = 0;
       uint16_t my_server_index = 0;
       if (is_mpi()) MPI_Comm_rank(MPI_COMM_WORLD, &current_rank);
-      my_server_index = ceil(
+      my_server_index = floor(
           current_rank / client->_job_configuration_advice._num_cores_per_node);
       auto dest_server = key._id % client->_job_configuration_advice._num_nodes;
       bool status = false;
@@ -90,7 +90,7 @@ int ATHENA_DECL(open64)(const char *path, int flags, ...) {
 
       int current_rank = 0;
       if (is_mpi()) MPI_Comm_rank(MPI_COMM_WORLD, &current_rank);
-      uint16_t my_server_index = ceil(
+      uint16_t my_server_index = floor(
           current_rank / client->_job_configuration_advice._num_cores_per_node);
       uint16_t server_index = my_server_index;
       auto mapped_file = client->_mapped_files.find(filename);
@@ -355,8 +355,8 @@ ssize_t ATHENA_DECL(read)(int fd, void *buf, size_t count) {
         int current_rank = 0;
         if (is_mpi()) MPI_Comm_rank(MPI_COMM_WORLD, &current_rank);
         uint16_t my_server_index =
-            ceil(current_rank /
-                 client->_job_configuration_advice._num_cores_per_node);
+            floor(current_rank /
+                  client->_job_configuration_advice._num_cores_per_node);
         if (my_server_index != file_server_index) {
           mimir::Logger::Instance("ATHENA")->log(
               mimir::LOG_INFO,
@@ -403,8 +403,8 @@ ssize_t ATHENA_DECL(write)(int fd, const void *buf, size_t count) {
         auto file_server_index = iter->second;
 
         my_server_index =
-            ceil(current_rank /
-                 client->_job_configuration_advice._num_cores_per_node);
+            floor(current_rank /
+                  client->_job_configuration_advice._num_cores_per_node);
         if (my_server_index != file_server_index) {
           DATA buf_data = DATA((char *)buf, count);
           ret = client->_rpc
@@ -456,8 +456,8 @@ int ATHENA_DECL(close)(int fd) {
         int current_rank = 0;
         if (is_mpi()) MPI_Comm_rank(MPI_COMM_WORLD, &current_rank);
         uint16_t my_server_index =
-            ceil(current_rank /
-                 client->_job_configuration_advice._num_cores_per_node);
+            floor(current_rank /
+                  client->_job_configuration_advice._num_cores_per_node);
         if (my_server_index != file_server_index) {
           mimir::Logger::Instance("ATHENA")->log(
               mimir::LOG_INFO,
@@ -492,8 +492,8 @@ off64_t ATHENA_DECL(lseek64)(int fd, off64_t offset, int whence) {
         int current_rank = 0;
         if (is_mpi()) MPI_Comm_rank(MPI_COMM_WORLD, &current_rank);
         uint16_t my_server_index =
-            ceil(current_rank /
-                 client->_job_configuration_advice._num_cores_per_node);
+            floor(current_rank /
+                  client->_job_configuration_advice._num_cores_per_node);
         if (my_server_index != file_server_index) {
           ret = client->_rpc
                     ->call<RPCLIB_MSGPACK::object_handle>(

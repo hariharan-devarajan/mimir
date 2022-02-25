@@ -39,7 +39,7 @@ MimirStatus file_advice_begin(FileAdvice &advice, MimirHandler &handler) {
     int current_rank = 0;
     uint16_t my_server_index = 0;
     if (is_mpi()) MPI_Comm_rank(MPI_COMM_WORLD, &current_rank);
-    my_server_index = ceil(current_rank / job_advice._num_cores_per_node);
+    my_server_index = floor(current_rank / job_advice._num_cores_per_node);
     auto dest_server = key._id % job_advice._num_nodes;
     if (my_server_index == dest_server &&
         (advice._type._secondary == OperationAdviceType::INPUT_FILE ||

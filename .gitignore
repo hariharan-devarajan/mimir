@@ -48,3 +48,4 @@
 /test/posix/pegasus/pegasus_athena/workflow.yml
 /test/posix/pegasus/pegasus_athena/pmc_wrapper.sh
 /test/posix/pegasus/pegasus_athena/workflow.py
+/test/posix/pegasus/pegasus_athena/scratch/
