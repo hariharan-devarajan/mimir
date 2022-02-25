@@ -17,6 +17,8 @@ endfunction()
 function(gcc_athena_test test_name test_tag)
     add_test(NAME ${test_name} COMMAND "${CMAKE_BINARY_DIR}/test/posix/pegasus" --durations yes --reporter compact --pfs ${PFS} --shm ${SHM} ${test_tag})
     set_property(TEST ${test_name} APPEND PROPERTY ENVIRONMENT LD_PRELOAD=${CMAKE_BINARY_DIR}/libathena.so)
+    set_property(TEST ${test_name} APPEND PROPERTY ENVIRONMENT SHM_PATH=${SHM})
+    set_property(TEST ${test_name} APPEND PROPERTY ENVIRONMENT PFS_PATH=${PFS})
 endfunction()
 
 function(mpi_athena_test test_name test_tag)

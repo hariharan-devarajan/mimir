@@ -10,6 +10,8 @@
 #include <execinfo.h>
 #include "mimir/log/logger.h"
 #include <mimir/api/mimir_interceptor.h>
+#include "mimir/advice/job_configuration_advice.h"
+#include "mimir/api/job_configuration.h"
 #ifdef ATHENA_PRELOAD
 
 void OnExit(void);
@@ -81,4 +83,5 @@ inline bool IsTracked(int fd) {
 #define MAP_OR_FAIL(func)
 #define ATHENA_DECL(func) func
 #endif
+
 #endif  // ATHENA_INTERCEPTOR_H

@@ -107,9 +107,16 @@ class MimirWorkflow:
     def create_transformation_catalog(self, exec_site_name="condorpool"):
         self.tc = TransformationCatalog()
 
+        executable_path = Path(shutil.which('pegasus-status')).parent.parent.absolute();
         path = self.mimir_bin
         filename = os.path.join(path, "pegasus")
         filename_mpi = os.path.join(path, "pegasus_mpi")
+
+        ld_preload = ""
+        if self.intercept:
+            if "ATHENA_LIB_PATH" not in os.environ:
+                raise Exception('ATHENA_LIB_PATH not set. Needs to point to libathena.so.')
+            ld_preload = os.environ["ATHENA_LIB_PATH"]
         raw = Transformation(
             "pegasus_raw", site=exec_site_name, pfn=filename, is_stageable=False,
         )
@@ -129,11 +136,16 @@ class MimirWorkflow:
                 Transformation("mpiexec", namespace="pegasus", site=exec_site_name, pfn=pmc_wrapper_pfn,
                                is_stageable=False)
                     .add_profiles(Namespace.PEGASUS, key="job.aggregator", value="mpiexec")
-                    .add_profiles(Namespace.CONDOR, key="getenv", value="*")
                     .add_profiles(Namespace.ENV, key="PATH", value=path)
+                    .add_profiles(Namespace.ENV, key="PEGASUS_HOME", value=f"{executable_path}")
+                    .add_profiles(Namespace.ENV, key="LD_PRELOAD2", value=f"{ld_preload}")
+                    .add_profiles(Namespace.ENV, key="PFS_PATH", value=self.pfs)
+                    .add_profiles(Namespace.ENV, key="SHM_PATH", value=self.shm)
+                    .add_profiles(Namespace.CONDOR, key="getenv", value="*")
             )
             self.tc.add_transformations(pmc)
         self.tc.add_transformations(shared, raw, write, read)
+        # self.tc.add_transformations(write, read)
 
     # --- Replica Catalog ------------------------------------------------------
     def create_replica_catalog(self):
@@ -143,18 +155,14 @@ class MimirWorkflow:
     def create_workflow(self):
         self.wf = Workflow(self.wf_name, infer_dependencies=True)
         file_data = File("test.dat")
-        ld_preload = ""
-        if self.intercept:
-            if "ATHENA_LIB_PATH" not in os.environ:
-                raise Exception('ATHENA_LIB_PATH not set. Needs to point to libathena.so.')
-            ld_preload = os.environ["ATHENA_LIB_PATH"]
 
         # RAW usecase no job dependency.
         raw = (
             Job("pegasus_raw")
                 .add_args("--durations", "yes", "--reporter", "compact",
                           "--pfs", self.pfs, "--shm", self.shm, "--filename", "raw.dat", "[operation=raw]")
-                .add_profiles(Namespace.ENV, key="LD_PRELOAD", value=f"{ld_preload}")
+                .add_profiles(Namespace.ENV, key="PFS_PATH", value=self.pfs)
+                .add_profiles(Namespace.ENV, key="SHM_PATH", value=self.shm)
         )
         # Read job depends on Write job.
         write = (
@@ -162,14 +170,16 @@ class MimirWorkflow:
                 .add_args("--durations", "yes", "--reporter", "compact",
                           "--pfs", self.pfs, "--shm", self.shm, "--filename", "write_job.dat", "[operation=write]")
                 .add_outputs(file_data, stage_out=False, register_replica=False)
-                .add_profiles(Namespace.ENV, key="LD_PRELOAD", value=f"{ld_preload}")
+                .add_profiles(Namespace.ENV, key="PFS_PATH", value=self.pfs)
+                .add_profiles(Namespace.ENV, key="SHM_PATH", value=self.shm)
         )
         read = (
             Job("pegasus_read")
                 .add_args("--durations", "yes", "--reporter", "compact",
                           "--pfs", self.pfs, "--shm", self.shm, "--filename", "write_job.dat", "[operation=read]")
                 .add_inputs(file_data)
-                .add_profiles(Namespace.ENV, key="LD_PRELOAD", value=f"{ld_preload}")
+                .add_profiles(Namespace.ENV, key="PFS_PATH", value=self.pfs)
+                .add_profiles(Namespace.ENV, key="SHM_PATH", value=self.shm)
         )
         # shared
         shareds = []
@@ -179,10 +189,12 @@ class MimirWorkflow:
                     .add_args("--durations", "yes", "--reporter", "compact",
                               "--pfs", self.pfs, "--shm", self.shm, "--filename", f"shared_job_{i}.dat",
                               "[operation=raw_shared]")
-                    .add_profiles(Namespace.ENV, key="LD_PRELOAD", value=f"{ld_preload}")
+                    .add_profiles(Namespace.ENV, key="PFS_PATH", value=self.pfs)
+                    .add_profiles(Namespace.ENV, key="SHM_PATH", value=self.shm)
             )
             shareds.append(shared)
         self.wf.add_jobs(*shareds, raw, write, read)
+        # self.wf.add_jobs(write, read)
 
 
 if __name__ == "__main__":

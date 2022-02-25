@@ -3,6 +3,7 @@
 //
 
 #include <athena/api/interceptor.h>
+#include "mimir/common/data_structure.h"
 
 extern const char* kPathExclusions[15] = {
     "/bin/", "/boot/", "/dev/",  "/etc/",   "/lib/",

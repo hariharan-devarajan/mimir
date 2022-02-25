@@ -1,6 +1,4 @@
 #!/bin/bash
-LD_PRELOAD2=$LD_PRELOAD
-unset LD_PRELOAD
 export SHM_PATH="/dev/shm/haridev/mimir"
 export PFS_PATH="${HOME}/temp/mimir/pfs"
 LAUNCH_DIR=`pwd`

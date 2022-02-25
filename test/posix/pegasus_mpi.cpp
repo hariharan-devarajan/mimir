@@ -18,7 +18,7 @@ struct Arguments {
   fs::path shm = "/home/hariharan/temp/mimir/shm";
   std::string filename = "test.dat";
   size_t request_size = 65536;
-  size_t iteration = 64;
+  size_t iteration = 8;
   bool debug = false;
 };
 }  // namespace mimir::test
@@ -31,21 +31,6 @@ mimir::test::Arguments args;
 
 int init(int* argc, char*** argv) {
   //  fprintf(stdout, "Initializing MPI\n");
-  using namespace mimir;
-  MimirHandler job_configuration_handler;
-  JobConfigurationAdvice job_conf_advice;
-  job_conf_advice._job_id = 0;
-  job_conf_advice._devices.emplace_back(args.shm, 16);
-  job_conf_advice._devices.emplace_back(args.pfs, 128);
-  job_conf_advice._job_time_minutes = 30;
-  job_conf_advice._num_cores_per_node = 2;
-  job_conf_advice._num_gpus_per_node = 0;
-  job_conf_advice._num_nodes = 2;
-  job_conf_advice._node_names = {"localhost", "localhost"};
-  job_conf_advice._rpc_port = 8888;
-  job_conf_advice._rpc_threads = 1;
-  job_conf_advice._priority = 100;
-  job_configuration_advice_begin(job_conf_advice, job_configuration_handler);
   MPI_Init(argc, argv);
   int my_rank, comm_size;
   MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);

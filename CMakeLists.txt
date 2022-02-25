@@ -43,7 +43,7 @@ set(MIMIR_LIBRARY_SRC include/mimir/mimir.h
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DHCL_ENABLE_RPCLIB")
 message("HCL_ENABLE_RPCLIB: ${HCL_ENABLE_RPCLIB}")
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -rdynamic")
 add_library(${PROJECT_NAME} SHARED ${MIMIR_LIBRARY_SRC})
 
 set(ATHENA_LIBRARY_SRC src/athena/mimir_adapter/api/posix.cpp

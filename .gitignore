@@ -46,3 +46,5 @@
 /test/posix/pegasus/pegasus_athena/sites.yml
 /test/posix/pegasus/pegasus_athena/transformations.yml
 /test/posix/pegasus/pegasus_athena/workflow.yml
+/test/posix/pegasus/pegasus_athena/pmc_wrapper.sh
+/test/posix/pegasus/pegasus_athena/workflow.py
