@@ -19,7 +19,7 @@ struct Arguments {
   std::string filename = "test.dat";
   size_t request_size = 65536;
   size_t iteration = 64;
-  bool debug = false;
+  bool debug = true;
 };
 }  // namespace mimir::test
 
@@ -391,11 +391,11 @@ TEST_CASE("ReadAfterWriteShared",
   MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
   MPI_Comm_size(MPI_COMM_WORLD, &comm_size);
   auto my_io_filename =
-      args.pfs / (args.filename + "." + std::to_string(my_rank) + "." +
+      args.shm / (args.filename + "." + std::to_string(my_rank) + "." +
                   std::to_string(comm_size));
 
   if (fs::exists(my_io_filename)) fs::remove(my_io_filename);
-  my_io_filename = args.shm / (args.filename + "." + std::to_string(my_rank) +
+  my_io_filename = args.pfs / (args.filename + "." + std::to_string(my_rank) +
                                "." + std::to_string(comm_size));
   if (fs::exists(my_io_filename)) fs::remove(my_io_filename);
   MPI_Barrier(MPI_COMM_WORLD);

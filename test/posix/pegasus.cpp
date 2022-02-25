@@ -367,10 +367,9 @@ TEST_CASE("ReadAfterWriteShared",
 
   initialization.resumeTime();
 
-  auto my_io_filename = args.pfs / (args.filename);
-
+  auto my_io_filename = args.shm / (args.filename);
   if (fs::exists(my_io_filename)) fs::remove(my_io_filename);
-  my_io_filename = args.shm / (args.filename);
+  my_io_filename = args.pfs / (args.filename);
   if (fs::exists(my_io_filename)) fs::remove(my_io_filename);
   using namespace mimir;
   MimirHandler file_handler;

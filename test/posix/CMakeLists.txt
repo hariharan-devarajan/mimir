@@ -22,6 +22,8 @@ endfunction()
 function(mpi_athena_test test_name test_tag)
     add_test(NAME ${test_name} COMMAND ${CMAKE_PREFIX_PATH}/bin/mpirun -n 4 ${CMAKE_BINARY_DIR}/test/posix/pegasus_mpi --durations yes --reporter compact --pfs ${PFS} --shm ${SHM} ${test_tag})
     set_property(TEST ${test_name} APPEND PROPERTY ENVIRONMENT LD_PRELOAD=${CMAKE_BINARY_DIR}/libathena.so)
+    set_property(TEST ${test_name} APPEND PROPERTY ENVIRONMENT SHM_PATH=${SHM})
+    set_property(TEST ${test_name} APPEND PROPERTY ENVIRONMENT PFS_PATH=${PFS})
     set_property(TEST ${test_name} APPEND PROPERTY ENVIRONMENT MPICH_DBG_LEVEL=VERBOSE)
 endfunction()
 
