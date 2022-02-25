@@ -5,6 +5,7 @@ from pathlib import Path
 from argparse import ArgumentParser
 import shutil
 from pathlib import Path
+from typing import Optional
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -34,14 +35,15 @@ class MimirWorkflow:
                  mimir_bin,
                  pfs,
                  shm,
-                 pmc=True,
-                 intercept=False):
+                 pmc: Optional[bool] = True,
+                 intercept: Optional[bool] = False):
         self.mimir_bin = mimir_bin
         self.pfs = pfs
         self.shm = shm
         self.dagfile = "workflow.yml"
         self.wf_name = "pegasus_io_test"
         self.wf_dir = str(Path(__file__).parent.resolve())
+        self.src_path = self.wf_dir
         self.pmc = pmc
         self.intercept = intercept
 
@@ -107,8 +109,12 @@ class MimirWorkflow:
 
         path = self.mimir_bin
         filename = os.path.join(path, "pegasus")
+        filename_mpi = os.path.join(path, "pegasus_mpi")
         raw = Transformation(
             "pegasus_raw", site=exec_site_name, pfn=filename, is_stageable=False,
+        )
+        shared = Transformation(
+            "pegasus_shared", site=exec_site_name, pfn=filename, is_stageable=False,
         )
         write = Transformation(
             "pegasus_write", site=exec_site_name, pfn=filename, is_stageable=False,
@@ -116,8 +122,18 @@ class MimirWorkflow:
         read = Transformation(
             "pegasus_read", site=exec_site_name, pfn=filename, is_stageable=False,
         )
-
-        self.tc.add_transformations(raw, write, read)
+        if self.pmc:
+            pmc_wrapper_pfn = self.src_path + '/pmc_wrapper.sh'
+            path = os.environ["PATH"] + ":."
+            pmc = (
+                Transformation("mpiexec", namespace="pegasus", site=exec_site_name, pfn=pmc_wrapper_pfn,
+                               is_stageable=False)
+                    .add_profiles(Namespace.PEGASUS, key="job.aggregator", value="mpiexec")
+                    .add_profiles(Namespace.CONDOR, key="getenv", value="*")
+                    .add_profiles(Namespace.ENV, key="PATH", value=path)
+            )
+            self.tc.add_transformations(pmc)
+        self.tc.add_transformations(shared, raw, write, read)
 
     # --- Replica Catalog ------------------------------------------------------
     def create_replica_catalog(self):
@@ -155,7 +171,18 @@ class MimirWorkflow:
                 .add_inputs(file_data)
                 .add_profiles(Namespace.ENV, key="LD_PRELOAD", value=f"{ld_preload}")
         )
-        self.wf.add_jobs(raw, write, read)
+        # shared
+        shareds = []
+        for i in [1, 2, 3, 4]:
+            shared = (
+                Job("pegasus_shared")
+                    .add_args("--durations", "yes", "--reporter", "compact",
+                              "--pfs", self.pfs, "--shm", self.shm, "--filename", f"shared_job_{i}.dat",
+                              "[operation=raw_shared]")
+                    .add_profiles(Namespace.ENV, key="LD_PRELOAD", value=f"{ld_preload}")
+            )
+            shareds.append(shared)
+        self.wf.add_jobs(*shareds, raw, write, read)
 
 
 if __name__ == "__main__":
@@ -183,10 +210,11 @@ if __name__ == "__main__":
         help="Binary directory for Mimir tests",
     )
     parser.add_argument('--intercept', action='store_true', dest='intercept', help='Intercept using Athena')
+    parser.add_argument('--pmc', action='store_true', dest='pmc', help='Use PMC')
 
     args = parser.parse_args()
 
-    workflow = MimirWorkflow(args.mimir_bin, args.pfs, args.shm, intercept=args.intercept)
+    workflow = MimirWorkflow(args.mimir_bin, args.pfs, args.shm, pmc=args.pmc, intercept=args.intercept)
 
     print("Creating execution sites...")
     workflow.create_sites_catalog()

@@ -355,3 +355,105 @@ TEST_CASE("ReadAfterWrite",
           initialization.getElapsedTime(), metadata.getElapsedTime(),
           io.getElapsedTime(), finalization.getElapsedTime());
 }
+
+TEST_CASE("ReadAfterWriteShared",
+          "[operation=raw_shared]"
+          "[request_size=" +
+              std::to_string(args.request_size) +
+              "]"
+              "[iteration=" +
+              std::to_string(args.iteration) + "]") {
+  Timer initialization, metadata, io, finalization;
+
+  initialization.resumeTime();
+
+  auto my_io_filename = args.pfs / (args.filename);
+
+  if (fs::exists(my_io_filename)) fs::remove(my_io_filename);
+  my_io_filename = args.shm / (args.filename);
+  if (fs::exists(my_io_filename)) fs::remove(my_io_filename);
+  using namespace mimir;
+  MimirHandler file_handler;
+  FileAdvice file_advice;
+  file_advice._type._secondary = OperationAdviceType::SHARED_FILE;
+  file_advice._per_io_data = args.iteration / (args.iteration * 2 + 4);
+  file_advice._per_io_metadata = 4 / (args.iteration * 2 + 4);
+  file_advice._size_mb = args.request_size * args.iteration / MB;
+  file_advice._device = Storage(args.pfs, 128);
+
+  if (args.request_size >= 0 && args.request_size < 4 * KB)
+    file_advice._write_distribution._0_4kb = 1.0;
+  else if (args.request_size >= 4 * KB && args.request_size < 64 * KB)
+    file_advice._write_distribution._4_64kb = 1.0;
+  if (args.request_size >= 64 * KB && args.request_size < 1 * MB)
+    file_advice._write_distribution._64kb_1mb = 1.0;
+  if (args.request_size >= 1 * MB && args.request_size < 16 * MB)
+    file_advice._write_distribution._1mb_16mb = 1.0;
+  if (args.request_size >= 16 * MB) file_advice._write_distribution._16mb = 1.0;
+
+  file_advice._io_amount_mb = args.request_size * args.iteration * 2 / MB;
+  file_advice._format = Format::FORMAT_BINARY;
+  file_advice._priority = 100;
+  auto filename = args.filename;
+  fs::path filepath = args.pfs / filename;
+  file_advice._name = filepath;
+  file_advice_begin(file_advice, file_handler);
+
+  fs::create_directories(args.pfs);
+  /** Clean existing file**/
+  if (fs::exists(my_io_filename)) fs::remove(my_io_filename);
+  /** Prepare data **/
+  auto write_data = std::vector<char>(args.request_size, 'w');
+  auto read_data = std::vector<char>(args.request_size, 'r');
+  initialization.pauseTime();
+
+  /** Write I/O **/
+  metadata.resumeTime();
+  int write_fd = open(my_io_filename.c_str(), O_WRONLY | O_CREAT,
+                      S_IRWXU | S_IRWXG | S_IRWXO);
+  metadata.pauseTime();
+  REQUIRE(write_fd != -1);
+
+  for (size_t i = 0; i < args.iteration; ++i) {
+    io.resumeTime();
+    ssize_t bytes_written =
+        write(write_fd, write_data.data(), args.request_size);
+    int fsync_status = fsync(write_fd);
+    io.pauseTime();
+  }
+  metadata.resumeTime();
+  int close_status_write = close(write_fd);
+  metadata.pauseTime();
+  REQUIRE(close_status_write == 0);
+
+  finalization.resumeTime();
+  printf("Write I/O performed on file %s\n", my_io_filename.c_str());
+  finalization.pauseTime();
+
+  /* Read I/O */
+  metadata.resumeTime();
+  int read_fd = open(my_io_filename.c_str(), O_RDONLY);
+  metadata.pauseTime();
+  REQUIRE(read_fd != -1);
+
+  for (size_t i = 0; i < args.iteration; ++i) {
+    io.resumeTime();
+    ssize_t bytes_read = read(read_fd, read_data.data(), args.request_size);
+    int fsync_status = fsync(read_fd);
+    io.pauseTime();
+    REQUIRE(bytes_read == args.request_size);
+  }
+
+  metadata.resumeTime();
+  int close_status = close(read_fd);
+  metadata.pauseTime();
+  REQUIRE(close_status == 0);
+
+  file_advice_end(file_handler);
+  fprintf(stdout, "Timing: init %f, metadata %f, io %f, and finalize %f.\n",
+          initialization.getElapsedTime(), metadata.getElapsedTime(),
+          io.getElapsedTime(), finalization.getElapsedTime());
+  if (fs::exists(my_io_filename)) fs::remove(my_io_filename);
+  my_io_filename = args.shm / (args.filename);
+  if (fs::exists(my_io_filename)) fs::remove(my_io_filename);
+}

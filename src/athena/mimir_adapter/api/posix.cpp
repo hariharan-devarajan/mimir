@@ -454,20 +454,22 @@ int ATHENA_DECL(close)(int fd) {
       if (iter != client->_fd_server.end()) {
         auto file_server_index = iter->second;
         int current_rank;
-        if (is_mpi()) MPI_Comm_rank(MPI_COMM_WORLD, &current_rank);
-        uint16_t my_server_index =
-            ceil(current_rank /
-                 client->_job_configuration_advice._num_cores_per_node);
-        if (my_server_index != file_server_index) {
-          mimir::Logger::Instance("ATHENA")->log(
-              mimir::LOG_INFO,
-              "Perform RPC on server %d close for file_descriptor %d",
-              file_server_index, fd);
-          ret = client->_rpc
-                    ->call<RPCLIB_MSGPACK::object_handle>(
-                        file_server_index, "athena::posix::close", fd)
-                    .as<int>();
-          perform_io = false;
+        if (is_mpi()) {
+          MPI_Comm_rank(MPI_COMM_WORLD, &current_rank);
+          uint16_t my_server_index =
+              ceil(current_rank /
+                   client->_job_configuration_advice._num_cores_per_node);
+          if (my_server_index != file_server_index) {
+            mimir::Logger::Instance("ATHENA")->log(
+                mimir::LOG_INFO,
+                "Perform RPC on server %d close for file_descriptor %d",
+                file_server_index, fd);
+            ret = client->_rpc
+                      ->call<RPCLIB_MSGPACK::object_handle>(
+                          file_server_index, "athena::posix::close", fd)
+                      .as<int>();
+            perform_io = false;
+          }
         }
       }
     }

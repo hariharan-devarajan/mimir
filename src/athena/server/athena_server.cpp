@@ -4,6 +4,7 @@
 
 #include "athena_server.h"
 #include "hcl/communication/rpc_factory.h"
+#include "mimir/log/logger.h"
 
 #include <athena/server/posix_io.h>
 
@@ -77,6 +78,8 @@ athena::Server::Server(bool is_mpi) : is_server(false) {
       _rpc->bind("athena::posix::write", funcWrite);
       _rpc->bind("athena::posix::read", funcRead);
       _rpc->bind("athena::posix::prefetch", funcPrefetch);
+      mimir::Logger::Instance("ATHENA")->log(
+          mimir::LOG_INFO, "Started the rpc server on rank %d", current_rank);
     }
   } else {
     throw std::runtime_error(

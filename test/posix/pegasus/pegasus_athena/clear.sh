@@ -1,3 +1,3 @@
 #!/bin/bash
 
-rm -r pegasus.properties  replicas.yml  sites.yml  transformations.yml  work  workflow.yml
+rm -r scratch pegasus.properties  replicas.yml  sites.yml  transformations.yml  work  workflow.yml pmc_wrapper.sh workflow.py
