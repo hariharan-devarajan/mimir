@@ -19,7 +19,7 @@ struct Arguments {
   std::string filename = "test.dat";
   size_t request_size = 65536;
   size_t iteration = 64;
-  bool debug = true;
+  bool debug = false;
 };
 }  // namespace mimir::test
 
