@@ -28,6 +28,7 @@ MimirStatus file_prefetch(mimir::FileAdvice &advice) {
   std::hash<std::string> hash_str;
   key._id = hash_str(advice._name);
   switch (advice._type._secondary) {
+    case mimir::OperationAdviceType::READ_ONLY_FILE:
     case mimir::OperationAdviceType::INPUT_FILE: {
       auto client = athena::Client::Instance();
       int current_rank = 0;

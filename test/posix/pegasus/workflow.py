@@ -29,15 +29,18 @@ class MimirWorkflow:
     mimir_bin = None
     pfs = None
     shm = None
+    jobs = None
 
     # --- Init ----------------------------------------------------------------
     def __init__(self,
                  mimir_bin,
                  pfs,
                  shm,
-                 pmc: Optional[bool] = True,
-                 intercept: Optional[bool] = False):
+                 jobs,
+                 pmc,
+                 intercept):
         self.mimir_bin = mimir_bin
+        self.jobs = jobs
         self.pfs = pfs
         self.shm = shm
         self.dagfile = "workflow.yml"
@@ -160,50 +163,66 @@ class MimirWorkflow:
     # --- Create Workflow -----------------------------------------------------
     def create_workflow(self):
         self.wf = Workflow(self.wf_name, infer_dependencies=True)
-        file_data = File("test.dat")
 
         # RAW usecase no job dependency.
-        raw = (
-            Job("pegasus_raw")
-                .add_args("--durations", "yes", "--reporter", "compact",
-                          "--pfs", self.pfs, "--shm", self.shm, "--filename", "raw.dat", "[operation=raw]")
-                .add_profiles(Namespace.ENV, key="PFS_PATH", value=self.pfs)
-                .add_profiles(Namespace.ENV, key="SHM_PATH", value=self.shm)
-        )
+        raws = []
+        for i in range(self.jobs):
+            raw = (
+                Job("pegasus_raw")
+                    .add_args("--durations", "yes", "--reporter", "compact",
+                              "--pfs", self.pfs, "--shm", self.shm, "--filename", f"raw_{i}.dat", "[operation=raw]")
+                    .add_profiles(Namespace.ENV, key="PFS_PATH", value=self.pfs)
+                    .add_profiles(Namespace.ENV, key="SHM_PATH", value=self.shm)
+            )
+            raws.append(raw)
         # Read job depends on Write job.
-        write = (
-            Job("pegasus_write")
-                .add_args("--durations", "yes", "--reporter", "compact",
-                          "--pfs", self.pfs, "--shm", self.shm, "--filename", "write_job.dat", "[operation=write]")
-                .add_outputs(file_data, stage_out=False, register_replica=False)
-                .add_profiles(Namespace.ENV, key="PFS_PATH", value=self.pfs)
-                .add_profiles(Namespace.ENV, key="SHM_PATH", value=self.shm)
-        )
-        read = (
-            Job("pegasus_read")
-                .add_args("--durations", "yes", "--reporter", "compact",
-                          "--pfs", self.pfs, "--shm", self.shm, "--filename", "write_job.dat", "[operation=read]")
-                .add_inputs(file_data)
-                .add_profiles(Namespace.ENV, key="PFS_PATH", value=self.pfs)
-                .add_profiles(Namespace.ENV, key="SHM_PATH", value=self.shm)
-        )
-        input = (
-            Job("pegasus_input")
-                .add_args("--durations", "yes", "--reporter", "compact",
-                          "--pfs", self.pfs, "--shm", self.shm, "--filename", "input.dat", "[operation=input]")
-                .add_profiles(Namespace.ENV, key="PFS_PATH", value=self.pfs)
-                .add_profiles(Namespace.ENV, key="SHM_PATH", value=self.shm)
-        )
-        read_only = (
-            Job("pegasus_read_only")
-                .add_args("--durations", "yes", "--reporter", "compact",
-                          "--pfs", self.pfs, "--shm", self.shm, "--filename", "read_only.dat", "[operation=read_only]")
-                .add_profiles(Namespace.ENV, key="PFS_PATH", value=self.pfs)
-                .add_profiles(Namespace.ENV, key="SHM_PATH", value=self.shm)
-        )
+        reads = []
+        writes = []
+        for i in range(self.jobs):
+            filename = f"test_{i}.dat"
+            file_data = File(filename)
+            write = (
+                Job("pegasus_write")
+                    .add_args("--durations", "yes", "--reporter", "compact",
+                              "--pfs", self.pfs, "--shm", self.shm, "--filename", filename, "[operation=write]")
+                    .add_outputs(file_data, stage_out=False, register_replica=False)
+                    .add_profiles(Namespace.ENV, key="PFS_PATH", value=self.pfs)
+                    .add_profiles(Namespace.ENV, key="SHM_PATH", value=self.shm)
+            )
+            read = (
+                Job("pegasus_read")
+                    .add_args("--durations", "yes", "--reporter", "compact",
+                              "--pfs", self.pfs, "--shm", self.shm, "--filename", filename, "[operation=read]")
+                    .add_inputs(file_data)
+                    .add_profiles(Namespace.ENV, key="PFS_PATH", value=self.pfs)
+                    .add_profiles(Namespace.ENV, key="SHM_PATH", value=self.shm)
+            )
+            writes.append(write)
+            reads.append(read)
+        inputs = []
+        for i in range(self.jobs):
+            input = (
+                Job("pegasus_input")
+                    .add_args("--durations", "yes", "--reporter", "compact",
+                              "--pfs", self.pfs, "--shm", self.shm, "--filename", f"input_{i}.dat", "[operation=input]")
+                    .add_profiles(Namespace.ENV, key="PFS_PATH", value=self.pfs)
+                    .add_profiles(Namespace.ENV, key="SHM_PATH", value=self.shm)
+            )
+            inputs.append(input)
+        read_onlys = []
+        for i in range(self.jobs):
+            read_only = (
+                Job("pegasus_read_only")
+                    .add_args("--durations", "yes", "--reporter", "compact",
+                              "--pfs", self.pfs, "--shm", self.shm, "--filename", f"read_only_{i}.dat",
+                              "[operation=read_only]")
+                    .add_profiles(Namespace.ENV, key="PFS_PATH", value=self.pfs)
+                    .add_profiles(Namespace.ENV, key="SHM_PATH", value=self.shm)
+            )
+            read_onlys.append(read_only)
         # shared
         shareds = []
-        for i in [1, 2, 3, 4]:
+        for i in range(self.jobs):
             shared = (
                 Job("pegasus_shared")
                     .add_args("--durations", "yes", "--reporter", "compact",
@@ -213,7 +232,7 @@ class MimirWorkflow:
                     .add_profiles(Namespace.ENV, key="SHM_PATH", value=self.shm)
             )
             shareds.append(shared)
-        self.wf.add_jobs(*shareds, raw, write, read, input, read_only)
+        self.wf.add_jobs(*shareds, raw, *writes, *reads, *inputs, *read_onlys)
         # self.wf.add_jobs(write, read)
 
 
@@ -241,12 +260,18 @@ if __name__ == "__main__":
         default="${PWD}",
         help="Binary directory for Mimir tests",
     )
+    parser.add_argument(
+        "--jobs",
+        type=int,
+        default=8,
+        help="# of jobs per type of test",
+    )
     parser.add_argument('--intercept', action='store_true', dest='intercept', help='Intercept using Athena')
     parser.add_argument('--pmc', action='store_true', dest='pmc', help='Use PMC')
 
     args = parser.parse_args()
 
-    workflow = MimirWorkflow(args.mimir_bin, args.pfs, args.shm, pmc=args.pmc, intercept=args.intercept)
+    workflow = MimirWorkflow(args.mimir_bin, args.pfs, args.shm, args.jobs, args.pmc, args.intercept)
 
     print("Creating execution sites...")
     workflow.create_sites_catalog()

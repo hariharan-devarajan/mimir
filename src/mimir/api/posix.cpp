@@ -29,30 +29,17 @@ MimirStatus file_advice_begin(FileAdvice &advice, MimirHandler &handler) {
   mimir::MimirKey job_key;
   job_key._id = 0;
   typedef MimirStatus (*real_t_file_prefetch_)(FileAdvice &);
-  auto job_type = AdviceType(PrimaryAdviceType::JOB_CONFIGURATION,
-                             OperationAdviceType::NO_OP);
-  auto job_advices =
-      AdviceHandler<JobConfigurationAdvice>::Instance(job_type)->find_advice(
-          job_key);
-  if (job_advices.first) {
-    auto job_advice = job_advices.second[0];
-    int current_rank = 0;
-    uint16_t my_server_index = 0;
-    if (is_mpi()) MPI_Comm_rank(MPI_COMM_WORLD, &current_rank);
-    my_server_index = floor(current_rank / job_advice._num_cores_per_node);
-    auto dest_server = key._id % job_advice._num_nodes;
-    if (my_server_index == dest_server &&
-        (advice._type._secondary == OperationAdviceType::INPUT_FILE ||
-         advice._type._secondary == OperationAdviceType::READ_ONLY_FILE)) {
-      auto ld_so = std::getenv("LD_PRELOAD");
-      auto handle = dlopen(ld_so, RTLD_GLOBAL | RTLD_LAZY);
-      real_t_file_prefetch_ derived_file_prefetch_ =
-          (real_t_file_prefetch_)dlsym(handle, "file_prefetch");
-      if (derived_file_prefetch_ == NULL) {
-        file_prefetch(advice);
-      } else {
-        derived_file_prefetch_(advice);
-      }
+
+  if ((advice._type._secondary == OperationAdviceType::INPUT_FILE ||
+       advice._type._secondary == OperationAdviceType::READ_ONLY_FILE)) {
+    auto ld_so = std::getenv("LD_PRELOAD");
+    auto handle = dlopen(ld_so, RTLD_GLOBAL | RTLD_LAZY);
+    real_t_file_prefetch_ derived_file_prefetch_ =
+        (real_t_file_prefetch_)dlsym(handle, "file_prefetch");
+    if (derived_file_prefetch_ == NULL) {
+      file_prefetch(advice);
+    } else {
+      derived_file_prefetch_(advice);
     }
   }
   AdviceHandler<FileAdvice>::Instance(advice._type)->save_advice(key, advice);
