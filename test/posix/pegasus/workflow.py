@@ -138,6 +138,10 @@ class MimirWorkflow:
         read_only = Transformation(
             "pegasus_read_only", site=exec_site_name, pfn=filename, is_stageable=False,
         )
+
+        priority = Transformation(
+            "pegasus_priority", site=exec_site_name, pfn=filename, is_stageable=False,
+        )
         if self.pmc:
             pmc_wrapper_pfn = self.src_path + '/pmc_wrapper.sh'
             path = os.environ["PATH"] + ":."
@@ -153,7 +157,7 @@ class MimirWorkflow:
                     .add_profiles(Namespace.CONDOR, key="getenv", value="*")
             )
             self.tc.add_transformations(pmc)
-        self.tc.add_transformations(shared, raw, write, read, input, read_only)
+        self.tc.add_transformations(shared, raw, write, read, input, read_only, priority)
         # self.tc.add_transformations(write, read)
 
     # --- Replica Catalog ------------------------------------------------------
@@ -209,6 +213,17 @@ class MimirWorkflow:
                     .add_profiles(Namespace.ENV, key="SHM_PATH", value=self.shm)
             )
             inputs.append(input)
+        priorities = []
+        for i in range(self.jobs):
+            priority = (
+                Job("pegasus_priority")
+                    .add_args("--durations", "yes", "--reporter", "compact",
+                              "--pfs", self.pfs, "--shm", self.shm, "--filename", f"priority_{i}.dat",
+                              "[operation=priority_write]")
+                    .add_profiles(Namespace.ENV, key="PFS_PATH", value=self.pfs)
+                    .add_profiles(Namespace.ENV, key="SHM_PATH", value=self.shm)
+            )
+            priorities.append(priority)
         read_onlys = []
         for i in range(self.jobs):
             read_only = (
@@ -232,7 +247,7 @@ class MimirWorkflow:
                     .add_profiles(Namespace.ENV, key="SHM_PATH", value=self.shm)
             )
             shareds.append(shared)
-        self.wf.add_jobs(*shareds, raw, *writes, *reads, *inputs, *read_onlys)
+        self.wf.add_jobs(*shareds, raw, *writes, *reads, *inputs, *read_onlys, *priorities)
         # self.wf.add_jobs(write, read)
 
 

@@ -118,7 +118,10 @@ int ATHENA_DECL(open64)(const char *path, int flags, ...) {
                                      (int)(device._used_capacity_mb +
                                            advice._size_mb)) >= 0) {
                       fs::create_directories(device._mount_point);
-                      filename.replace(0, advice._device._mount_point.size(),
+                      filename.replace(0,
+                                       client->_job_configuration_advice
+                                           ._devices[advice._current_device]
+                                           ._mount_point.size(),
                                        device._mount_point);
                       if (!is_read_only || fs::exists(filename)) {
                         device._used_capacity_mb =
@@ -184,7 +187,10 @@ int ATHENA_DECL(open64)(const char *path, int flags, ...) {
                                        (int)(device._used_capacity_mb +
                                              advice._size_mb)) >= 0) {
                         fs::create_directories(device._mount_point);
-                        filename.replace(0, advice._device._mount_point.size(),
+                        filename.replace(0,
+                                         client->_job_configuration_advice
+                                             ._devices[advice._current_device]
+                                             ._mount_point.size(),
                                          device._mount_point);
                         if (!is_read_only || fs::exists(filename)) {
                           device._used_capacity_mb =
@@ -262,8 +268,42 @@ int ATHENA_DECL(open64)(const char *path, int flags, ...) {
                       mimir::LOG_INFO, "Perform Local open for file %s", path);
                   mimir::Storage device;
                   device = client->_job_configuration_advice._devices[0];
-                  filename.replace(0, advice._device._mount_point.size(),
+                  filename.replace(0,
+                                   client->_job_configuration_advice
+                                       ._devices[advice._current_device]
+                                       ._mount_point.size(),
                                    device._mount_point);
+                }
+                break;
+              }
+              case mimir::OperationAdviceType::PLACEMENT_FILE: {
+                /** perform user defined placement on files **/
+                server_index = std::hash<std::string>()(filename) %
+                               client->_job_configuration_advice._num_nodes;
+                if (my_server_index != server_index) {
+                  mimir::Logger::Instance("ATHENA")->log(
+                      mimir::LOG_INFO,
+                      "Perform RPC on server %d open for file %s", server_index,
+                      path);
+                  auto rpc_ret =
+                      client->_rpc->call<RPCLIB_MSGPACK::object_handle>(
+                          server_index, "athena::posix::open", filename, flags,
+                          mode);
+                  ret = rpc_ret.as<int>();
+                  perform_io = false;
+                } else {
+                  mimir::Logger::Instance("ATHENA")->log(
+                      mimir::LOG_INFO, "Perform Local open for file %s", path);
+                  mimir::Storage device;
+                  if (advice._placement_device != advice._current_device) {
+                    device = client->_job_configuration_advice
+                                 ._devices[advice._placement_device];
+                    filename.replace(0,
+                                     client->_job_configuration_advice
+                                         ._devices[advice._current_device]
+                                         ._mount_point.size(),
+                                     device._mount_point);
+                  }
                 }
                 break;
               }

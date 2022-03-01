@@ -40,7 +40,8 @@ enum OperationAdviceType : uint16_t {
   WRITE_ONLY_FILE = 9,
   READ_ONLY_FILE = 10,
   EVENTUAL_CONSISTENCY = 11,
-  STRONG_CONSISTENCY = 12
+  STRONG_CONSISTENCY = 12,
+  PLACEMENT_FILE = 13
 };
 
 struct AdviceType {

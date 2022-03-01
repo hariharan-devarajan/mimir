@@ -37,7 +37,7 @@ TEST_CASE("BatchedWriteSequential",
   file_advice._per_io_data = info.num_iterations / (info.num_iterations + 2);
   file_advice._per_io_metadata = 2 / (info.num_iterations + 2);
   file_advice._size_mb = args.request_size * info.num_iterations / MB;
-  file_advice._device = Storage(args.pfs, 128);
+  file_advice._current_device = 1;
 
   if (args.request_size >= 0 && args.request_size < 4 * KB)
     file_advice._write_distribution._0_4kb = 1.0;
