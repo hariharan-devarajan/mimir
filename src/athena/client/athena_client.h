@@ -17,28 +17,17 @@
 #include "hcl/communication/rpc_factory.h"
 
 namespace athena {
+template <typename INTERFACE_IDENTIFIER>
 class Client {
  private:
   static std::shared_ptr<Client> instance;
 
- public:
-  mimir::JobConfigurationAdvice _job_configuration_advice;
-  std::shared_ptr<mimir::AdviceHandler<mimir::JobConfigurationAdvice>>
-      _job_handler;
-  std::unordered_map<std::string, std::string> _mapped_files;
-  std::unordered_map<int, uint16_t> _fd_server;
-  std::shared_ptr<RPC> _rpc;
-  static std::shared_ptr<Client> Instance(bool is_mpi = false) {
-    if (instance == nullptr) {
-      instance = std::make_shared<Client>(is_mpi);
-    }
-    return instance;
-  }
+ protected:
   Client(bool is_mpi)
       : _job_configuration_advice(),
         _job_handler(),
         _mapped_files(),
-        _fd_server() {
+        _id_server_map() {
     mimir::Logger::Instance("ATHENA")->log(
         mimir::LOG_INFO, "Initializing Client for MPI %d", is_mpi);
     auto job_conf_type =
@@ -76,6 +65,14 @@ class Client {
     _rpc = hcl::Singleton<RPCFactory>::GetInstance()->GetRPC(
         _job_configuration_advice._rpc_port);
   }
+
+ public:
+  mimir::JobConfigurationAdvice _job_configuration_advice;
+  std::shared_ptr<mimir::AdviceHandler<mimir::JobConfigurationAdvice>>
+      _job_handler;
+  std::unordered_map<std::string, std::string> _mapped_files;
+  std::unordered_map<INTERFACE_IDENTIFIER, uint16_t> _id_server_map;
+  std::shared_ptr<RPC> _rpc;
 
   void finalize() {  //_rpc->Stop();
   }

@@ -21,9 +21,7 @@ int ATHENA_DECL(MPI_Init)(int *argc, char ***argv) {
     set_mpi();
     mimir::Logger::Instance("ATHENA")->log(mimir::LOG_INFO,
                                            "Intercepting MPI_Init");
-    athena::Server::Instance(true);
-    MPI_Barrier(MPI_COMM_WORLD);
-    athena::Client::Instance(true);
+    athena::Server::Instance();
     MPI_Barrier(MPI_COMM_WORLD);
   }
   return status;

@@ -16,7 +16,7 @@
 #include <cstring>
 #include <experimental/filesystem>
 
-#include "athena/client/athena_client.h"
+#include "athena/client/posix_athena_client.h"
 #include "athena/server/posix_io.h"
 
 namespace fs = std::experimental::filesystem;
@@ -30,7 +30,7 @@ MimirStatus file_prefetch(mimir::FileAdvice &advice) {
   switch (advice._type._secondary) {
     case mimir::OperationAdviceType::READ_ONLY_FILE:
     case mimir::OperationAdviceType::INPUT_FILE: {
-      auto client = athena::Client::Instance();
+      auto client = athena::PosixClient::Instance();
       int current_rank = 0;
       uint16_t my_server_index = 0;
       if (is_mpi()) MPI_Comm_rank(MPI_COMM_WORLD, &current_rank);
@@ -72,7 +72,7 @@ int ATHENA_DECL(open64)(const char *path, int flags, ...) {
   bool perform_io = true;
   std::string filename(path);
   if (IsTracked(path)) {
-    auto client = athena::Client::Instance();
+    auto client = athena::PosixClient::Instance();
     if (client != nullptr) {
 
       bool is_read_only = false;
@@ -341,11 +341,11 @@ int ATHENA_DECL(open64)(const char *path, int flags, ...) {
                                                  strerror(errno), path);
         }
       }
-      auto iter = client->_fd_server.find(ret);
-      if (iter != client->_fd_server.end()) {
-        client->_fd_server.erase(ret);
+      auto iter = client->_id_server_map.find(ret);
+      if (iter != client->_id_server_map.end()) {
+        client->_id_server_map.erase(ret);
       }
-      client->_fd_server.emplace(ret, server_index);
+      client->_id_server_map.emplace(ret, server_index);
     } else {
       if (perform_io) {
         mimir::Logger::Instance("ATHENA")->log(mimir::LOG_WARN,
@@ -388,10 +388,10 @@ ssize_t ATHENA_DECL(read)(int fd, void *buf, size_t count) {
   bool is_tracked = false;
   if (IsTracked(fd)) {
     is_tracked = true;
-    auto client = athena::Client::Instance();
+    auto client = athena::PosixClient::Instance();
     if (client != nullptr) {
-      auto iter = client->_fd_server.find(fd);
-      if (iter != client->_fd_server.end()) {
+      auto iter = client->_id_server_map.find(fd);
+      if (iter != client->_id_server_map.end()) {
         auto file_server_index = iter->second;
         int current_rank = 0;
         if (is_mpi()) MPI_Comm_rank(MPI_COMM_WORLD, &current_rank);
@@ -437,10 +437,10 @@ ssize_t ATHENA_DECL(write)(int fd, const void *buf, size_t count) {
   if (IsTracked(fd)) {
     if (is_mpi()) MPI_Comm_rank(MPI_COMM_WORLD, &current_rank);
     is_tracked = true;
-    auto client = athena::Client::Instance();
+    auto client = athena::PosixClient::Instance();
     if (client != nullptr) {
-      auto iter = client->_fd_server.find(fd);
-      if (iter != client->_fd_server.end()) {
+      auto iter = client->_id_server_map.find(fd);
+      if (iter != client->_id_server_map.end()) {
         auto file_server_index = iter->second;
 
         my_server_index =
@@ -489,10 +489,10 @@ int ATHENA_DECL(close)(int fd) {
   int ret;
   bool perform_io = true;
   if (IsTracked(fd)) {
-    auto client = athena::Client::Instance();
+    auto client = athena::PosixClient::Instance();
     if (client != nullptr) {
-      auto iter = client->_fd_server.find(fd);
-      if (iter != client->_fd_server.end()) {
+      auto iter = client->_id_server_map.find(fd);
+      if (iter != client->_id_server_map.end()) {
         auto file_server_index = iter->second;
         int current_rank = 0;
         if (is_mpi()) MPI_Comm_rank(MPI_COMM_WORLD, &current_rank);
@@ -525,10 +525,10 @@ off64_t ATHENA_DECL(lseek64)(int fd, off64_t offset, int whence) {
 
   bool perform_io = true;
   if (IsTracked(fd)) {
-    auto client = athena::Client::Instance();
+    auto client = athena::PosixClient::Instance();
     if (client != nullptr) {
-      auto iter = client->_fd_server.find(fd);
-      if (iter != client->_fd_server.end()) {
+      auto iter = client->_id_server_map.find(fd);
+      if (iter != client->_id_server_map.end()) {
         auto file_server_index = iter->second;
         int current_rank = 0;
         if (is_mpi()) MPI_Comm_rank(MPI_COMM_WORLD, &current_rank);

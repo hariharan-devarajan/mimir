@@ -12,7 +12,7 @@
 #include <experimental/filesystem>
 #include <thallium.hpp>
 
-#include "athena/client/athena_client.h"
+#include "athena/client/posix_athena_client.h"
 
 namespace fs = std::experimental::filesystem;
 
@@ -43,7 +43,7 @@ DATA athena::posix_read(int fd, size_t count) {
   return data_str;
 }
 bool athena::posix_prefetch(DATA filename) {
-  auto client = athena::Client::Instance();
+  auto client = athena::PosixClient::Instance();
   fs::create_directories(
       client->_job_configuration_advice._devices[0]._mount_point);
   fs::path new_path =

@@ -10,28 +10,29 @@
 #include <memory>
 #include <hcl/communication/rpc_lib.h>
 #include "mimir/advice/advice_handler.h"
+#include "mimir/api/mimir_interceptor.h"
 namespace athena {
 class Server {
  private:
-  static std::shared_ptr<Server> instance;
   mimir::JobConfigurationAdvice _job_configuration_advice;
   bool is_server;
+  static std::shared_ptr<Server> instance;
 
  public:
+  Server(bool is_mpi);
   std::shared_ptr<RPC> _rpc;
-  static std::shared_ptr<Server> Instance(bool is_mpi = false) {
+  static std::shared_ptr<Server> Instance() {
     if (instance == nullptr) {
-      instance = std::make_shared<Server>(is_mpi);
+      instance = std::make_shared<Server>(is_mpi());
     }
     return instance;
   }
-  Server(bool is_mpi);
-
   void finalize() {
     if (is_server) {
       //_rpc->Stop();
     }
   }
+  bool bind_posix_calls();
 };
 }  // namespace athena
 #endif  // MIMIR_ATHENA_SERVER_H

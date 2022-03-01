@@ -61,29 +61,33 @@ athena::Server::Server(bool is_mpi) : is_server(false) {
 
     _rpc = hcl::Singleton<RPCFactory>::GetInstance()->GetRPC(
         _job_configuration_advice._rpc_port);
-    std::function<int(DATA, int, int)> funcOpen =
-        std::bind(&athena::posix_open, std::placeholders::_1,
-                  std::placeholders::_2, std::placeholders::_3);
-    std::function<int(int)> funcClose =
-        std::bind(&athena::posix_close, std::placeholders::_1);
-    std::function<off_t(int, int, int)> funcSeek =
-        std::bind(&athena::posix_lseek, std::placeholders::_1,
-                  std::placeholders::_2, std::placeholders::_3);
-    std::function<DATA(int, size_t)> funcRead = std::bind(
-        &athena::posix_read, std::placeholders::_1, std::placeholders::_2);
-    std::function<ssize_t(int, DATA, size_t)> funcWrite =
-        std::bind(&athena::posix_write, std::placeholders::_1,
-                  std::placeholders::_2, std::placeholders::_3);
-
-    std::function<bool(DATA)> funcPrefetch =
-        std::bind(&athena::posix_prefetch, std::placeholders::_1);
-    _rpc->bind("athena::posix::open", funcOpen);
-    _rpc->bind("athena::posix::close", funcClose);
-    _rpc->bind("athena::posix::lseek", funcSeek);
-    _rpc->bind("athena::posix::write", funcWrite);
-    _rpc->bind("athena::posix::read", funcRead);
-    _rpc->bind("athena::posix::prefetch", funcPrefetch);
+    bind_posix_calls();
     mimir::Logger::Instance("ATHENA")->log(
         mimir::LOG_INFO, "Started the rpc server on rank %d", current_rank);
   }
+}
+bool athena::Server::bind_posix_calls() {
+  std::function<int(DATA, int, int)> funcOpen =
+      std::bind(&athena::posix_open, std::placeholders::_1,
+                std::placeholders::_2, std::placeholders::_3);
+  std::function<int(int)> funcClose =
+      std::bind(&athena::posix_close, std::placeholders::_1);
+  std::function<off_t(int, int, int)> funcSeek =
+      std::bind(&athena::posix_lseek, std::placeholders::_1,
+                std::placeholders::_2, std::placeholders::_3);
+  std::function<DATA(int, size_t)> funcRead = std::bind(
+      &athena::posix_read, std::placeholders::_1, std::placeholders::_2);
+  std::function<ssize_t(int, DATA, size_t)> funcWrite =
+      std::bind(&athena::posix_write, std::placeholders::_1,
+                std::placeholders::_2, std::placeholders::_3);
+
+  std::function<bool(DATA)> funcPrefetch =
+      std::bind(&athena::posix_prefetch, std::placeholders::_1);
+  _rpc->bind("athena::posix::open", funcOpen);
+  _rpc->bind("athena::posix::close", funcClose);
+  _rpc->bind("athena::posix::lseek", funcSeek);
+  _rpc->bind("athena::posix::write", funcWrite);
+  _rpc->bind("athena::posix::read", funcRead);
+  _rpc->bind("athena::posix::prefetch", funcPrefetch);
+  return true;
 }
