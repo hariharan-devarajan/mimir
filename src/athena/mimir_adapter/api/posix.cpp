@@ -218,8 +218,6 @@ int ATHENA_DECL(open64)(const char *path, int flags, ...) {
                           job_conf_key, client->_job_configuration_advice);
                       client->_mapped_files.emplace(std::string(path),
                                                     filename);
-                      track_files.emplace_back(filename);
-                      track_files.emplace_back(std::string(path));
                     }
                   }
                 }
@@ -368,6 +366,8 @@ int ATHENA_DECL(open64)(const char *path, int flags, ...) {
       }
     }
   }
+  if (!perform_io || strcmp(filename.c_str(), path) != 0)
+    track_files.emplace(ret);
   return ret;
 }
 
@@ -507,9 +507,11 @@ int ATHENA_DECL(close)(int fd) {
           ret = client->_rpc
                     ->call<RPCLIB_MSGPACK::object_handle>(
                         file_server_index, "athena::posix::close", fd)
-                      .as<int>();
-            perform_io = false;
+                    .as<int>();
+          perform_io = false;
         }
+        client->_id_server_map.erase(fd);
+        track_files.erase(fd);
       }
     }
   }

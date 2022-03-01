@@ -207,7 +207,7 @@ TEST_CASE("Read",
   file_advice._priority = 100;
   file_advice._name = filepath;
   file_advice_begin(file_advice, file_handler);
-
+  MPI_Barrier(MPI_COMM_WORLD);
   /** Main I/O **/
   metadata.resumeTime();
   int fd = open(filepath.c_str(), O_RDONLY);

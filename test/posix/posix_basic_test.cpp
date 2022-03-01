@@ -101,5 +101,5 @@ TEST_CASE("BatchedWriteSequential",
 #if defined(ATHENA_PRELOAD)
   file_advice_end(file_handler);
 #endif
-  posttest(new_file, existing_file);
+  posttest(new_file, existing_file, false);
 }

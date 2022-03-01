@@ -6,7 +6,7 @@
 #define ATHENA_INTERCEPTOR_H
 #include <string>
 #include <unistd.h>
-#include <vector>
+#include <unordered_set>
 #include <execinfo.h>
 #include "mimir/log/logger.h"
 #include <mimir/api/mimir_interceptor.h>
@@ -17,7 +17,7 @@
 void OnExit(void);
 extern const char* kPathExclusions[15];
 extern const char* kExtensionExclusions[1];
-extern std::vector<std::string> track_files;
+extern std::unordered_set<int> track_files;
 #define BT_BUF_SIZE 100
 inline void print_backtrace(void) {
   int nptrs;
@@ -50,10 +50,10 @@ inline std::string GetFilenameFromFD(int fd) {
   filename[r] = '\0';
   return filename;
 }
-bool IsTracked(std::string path);
+bool IsTracked(std::string path, int fd = -1);
 inline bool IsTracked(int fd) {
   std::string file = GetFilenameFromFD(fd);
-  return IsTracked(file);
+  return IsTracked(file, fd);
 }
 
 #include <dlfcn.h>

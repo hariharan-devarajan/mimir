@@ -11,14 +11,14 @@ extern const char* kPathExclusions[15] = {
     "/var/", "/run/",  "pipe",   "socket:", "anon_inode:"};
 
 extern const char* kExtensionExclusions[1] = {"conf"};
-extern std::vector<std::string> track_files = std::vector<std::string>();
+extern std::unordered_set<int> track_files = std::unordered_set<int>();
 
 namespace athena {
 bool exit = false;
 }  // namespace athena
 void OnExit(void) { athena::exit = true; }
 
-bool IsTracked(std::string path) {
+bool IsTracked(std::string path, int fd) {
   if (athena::exit) return false;
   if (path == "/") {
     return false;
@@ -26,15 +26,14 @@ bool IsTracked(std::string path) {
   if (path.find("socket:") == 0) {
     return false;
   }
-  //  for (const auto& pth : track_files) {
-  //    if (path.find(pth) == 0) {
-  //      /*mimir::Logger::Instance("ATHENA")->log(mimir::LOG_INFO,
-  //                                             "Tracking file %s",
-  //         path.c_str());*/
-  //      return true;
-  //    }
-  //  }
-
+  if (fd != -1 && !track_files.empty()) {
+    auto iter = track_files.find(fd);
+    if (iter != track_files.end()) {
+      mimir::Logger::Instance("ATHENA")->log(mimir::LOG_INFO,
+                                             "Tracking file %d", fd);
+      return true;
+    }
+  }
   for (const auto& pth : kPathExclusions) {
     if (path.find(pth) == 0) {
       return false;
