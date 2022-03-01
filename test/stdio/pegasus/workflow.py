@@ -112,8 +112,8 @@ class MimirWorkflow:
 
         executable_path = Path(shutil.which('pegasus-status')).parent.parent.absolute();
         path = self.mimir_bin
-        filename = os.path.join(path, "pegasus")
-        filename_mpi = os.path.join(path, "pegasus_mpi")
+        filename = os.path.join(path, "stdio_pegasus")
+        filename_mpi = os.path.join(path, "stdio_pegasus_mpi")
 
         ld_preload = ""
         if self.intercept:

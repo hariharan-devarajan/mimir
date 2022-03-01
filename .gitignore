@@ -49,3 +49,12 @@
 /test/posix/pegasus/pegasus_athena/pmc_wrapper.sh
 /test/posix/pegasus/pegasus_athena/workflow.py
 /test/posix/pegasus/pegasus_athena/scratch/
+/test/stdio/pegasus/athena/scratch/
+/test/stdio/pegasus/athena/work/
+/test/stdio/pegasus/athena/pegasus.properties
+/test/stdio/pegasus/athena/pmc_wrapper.sh
+/test/stdio/pegasus/athena/replicas.yml
+/test/stdio/pegasus/athena/sites.yml
+/test/stdio/pegasus/athena/transformations.yml
+/test/stdio/pegasus/athena/workflow.py
+/test/stdio/pegasus/athena/workflow.yml

@@ -5,12 +5,14 @@
 #include <athena/api/interceptor.h>
 #include "mimir/common/data_structure.h"
 
-extern const char* kPathExclusions[15] = {
-    "/bin/", "/boot/", "/dev/",  "/etc/",   "/lib/",
-    "/opt/", "/proc/", "/sbin/", "/sys/",   "/usr/",
-    "/var/", "/run/",  "pipe",   "socket:", "anon_inode:"};
+extern const char* kPathExclusions[18] = {
+    "/bin/",   "/boot/",  "/dev/",       "/etc/",
+    "/lib/",   "/opt/",   "/proc/",      "/sbin/",
+    "/sys/",   "/usr/",   "/var/",       "/run/",
+    "pipe",    "socket:", "anon_inode:", "merge_whole-wf.in",
+    "pegasus", "mimir"};
 
-extern const char* kExtensionExclusions[1] = {"conf"};
+extern const char* kExtensionExclusions[3] = {"conf", "out", "in"};
 extern std::unordered_set<int> track_files = std::unordered_set<int>();
 
 namespace athena {
@@ -20,10 +22,7 @@ void OnExit(void) { athena::exit = true; }
 
 bool IsTracked(std::string path, int fd) {
   if (athena::exit) return false;
-  if (path == "/") {
-    return false;
-  }
-  if (path.find("socket:") == 0) {
+  if (path == "/" || path.find("socket:") == 0) {
     return false;
   }
   if (fd != -1 && !track_files.empty()) {
