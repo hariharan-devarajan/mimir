@@ -163,6 +163,14 @@ TEST_CASE("Read",
   args.filename = args.filename + "." + std::to_string(my_rank) + "." +
                   std::to_string(comm_size);
   fs::path filepath = args.pfs / args.filename;
+  std::string cmd = "{ tr -dc '[:alnum:]' < /dev/urandom | head -c " +
+        std::to_string(args.request_size * args.iteration) + "; } > " +
+                    filepath.c_str() + " ";
+  int status = system(cmd.c_str());
+  if (fs::exists(filepath)) {
+    mimir::Logger::Instance("PEGASUS_TEST")
+        ->log(mimir::LOG_INFO, "written file %s", filepath.c_str());
+  }
   /** Prepare data **/
   auto read_data = std::vector<char>(args.request_size, 'r');
   initialization.pauseTime();
