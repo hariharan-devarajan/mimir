@@ -112,7 +112,7 @@ inline mimir::JobConfigurationAdvice load_job_details() {
   auto PFS = std::getenv("PFS_PATH");
   mimir::JobConfigurationAdvice job_conf_advice;
   job_conf_advice._job_id = 0;
-  job_conf_advice._devices.emplace_back(SHM, 16);
+  job_conf_advice._devices.emplace_back(SHM, 1024);
   job_conf_advice._devices.emplace_back(PFS, 128);
   job_conf_advice._job_time_minutes = 30;
   job_conf_advice._num_cores_per_node = 2;

@@ -40,7 +40,7 @@ class Client {
     job_conf_key._id = 0;
     auto job_conf_advices = _job_handler->find_advice(job_conf_key);
     if (job_conf_advices.first) {
-      _job_configuration_advice = job_conf_advices.second[0];
+      _job_configuration_advice = job_conf_advices.second.begin()->second;
     } else {
       _job_configuration_advice = load_job_details();
       _job_handler->save_advice(job_conf_key, _job_configuration_advice);

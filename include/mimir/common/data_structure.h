@@ -8,6 +8,7 @@
 #include <assert.h>
 #include <mimir/advice/advice.h>
 #include <mimir/advice/advice_type.h>
+#include <hcl/common/data_structures.h>
 #include <stdint-gcc.h>
 
 #include <memory>
@@ -50,16 +51,65 @@ struct Storage {
 
 struct Node {
   uint32_t _unique_hash;
+  Node() : _unique_hash() {}
+  Node(uint32_t unique_hash) : _unique_hash(unique_hash) {}
+  Node(const Node& other) : _unique_hash(other._unique_hash) {}
+  Node(const Node&& other) : _unique_hash(other._unique_hash) {}
+  Node& operator=(const Node& other) {
+    _unique_hash = other._unique_hash;
+    return *this;
+  }
+  bool operator==(const Node& other) const {
+    return _unique_hash == other._unique_hash;
+  }
 };
 
 struct Application : public Node {
   std::string _name;
   uint32_t _argument_hash;
+  Application() : Node(), _name(), _argument_hash() {}
+  Application(uint32_t unique_hash, std::string name, uint32_t argument_hash)
+      : Node(unique_hash), _name(name), _argument_hash(argument_hash) {}
+  Application(const Application& other)
+      : Node(other), _name(other._name), _argument_hash(other._argument_hash) {}
+  Application(const Application&& other)
+      : Node(other), _name(other._name), _argument_hash(other._argument_hash) {}
+  Application& operator=(const Application& other) {
+    Node::operator=(other);
+    _name = other._name;
+    _argument_hash = other._argument_hash;
+    return *this;
+  }
+  bool operator==(const Application& other) const {
+    return Node::operator==(other) && _name == other._name &&
+           _argument_hash == other._argument_hash;
+  }
 };
 
 struct File : public Node {
   std::string _name;
   uint32_t _full_path_hash;
+  File() : Node(), _name(), _full_path_hash() {}
+  File(uint32_t unique_hash, std::string name, uint32_t full_path_hash)
+      : Node(unique_hash), _name(name), _full_path_hash(full_path_hash) {}
+  File(const File& other)
+      : Node(other),
+        _name(other._name),
+        _full_path_hash(other._full_path_hash) {}
+  File(const File&& other)
+      : Node(other),
+        _name(other._name),
+        _full_path_hash(other._full_path_hash) {}
+  File& operator=(const File& other) {
+    Node::operator=(other);
+    _name = other._name;
+    _full_path_hash = other._full_path_hash;
+    return *this;
+  }
+  bool operator==(const File& other) const {
+    return Node::operator==(other) && _name == other._name &&
+           _full_path_hash == other._full_path_hash;
+  }
 };
 
 template <typename SOURCE, typename DESTINATION>
@@ -107,6 +157,7 @@ struct TransferSizeDistribution {
 struct MimirKey {
   size_t _id;
   MimirKey() : _id() {}
+  MimirKey(size_t id) : _id(id) {}
   MimirKey(const MimirKey& key) : _id(key._id) {}
   MimirKey(const MimirKey&& key) : _id(key._id) {}
 
@@ -115,21 +166,29 @@ struct MimirKey {
 
 struct MimirHandler {
  public:
-  size_t _id;
+  size_t _key_id;
+  size_t _advice_index;
   AdviceType _type;
   MimirHandler()
-      : _type(PrimaryAdviceType::ADVICE_NONE, OperationAdviceType::NO_OP),
-        _id() {}
+      : _key_id(),
+        _advice_index(),
+        _type(PrimaryAdviceType::ADVICE_NONE, OperationAdviceType::NO_OP) {}
   MimirHandler(const MimirHandler& other)
-      : _type(other._type), _id(other._id) {}
+      : _type(other._type),
+        _key_id(other._key_id),
+        _advice_index(other._advice_index) {}
   MimirHandler(const MimirHandler&& other)
-      : _type(other._type), _id(other._id) {}
+      : _type(other._type),
+        _key_id(other._key_id),
+        _advice_index(other._advice_index) {}
   bool operator==(const MimirHandler& other) const {
-    return _type == other._type && _id == other._id;
+    return _type == other._type && _key_id == other._key_id &&
+           _advice_index == other._advice_index;
   }
   MimirHandler& operator=(const MimirHandler& other) {
     _type = other._type;
-    _id = other._id;
+    _key_id = other._key_id;
+    _advice_index = other._advice_index;
     return *this;
   }
 };
@@ -152,4 +211,10 @@ struct hash<mimir::MimirKey> {
 };
 
 }  // namespace std
+
+inline std::ostream& operator<<(std::ostream& os, mimir::MimirKey const& m) {
+  return os << "{TYPE:MimirKey,"
+            << "id:" << m._id << "}";
+}
+
 #endif  // MIMIR_DATA_STRUCTURE_H

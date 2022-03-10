@@ -17,14 +17,15 @@ MimirStatus job_configuration_advice_begin(JobConfigurationAdvice &advice,
   AdviceHandler<JobConfigurationAdvice>::Instance(advice._type)
       ->save_advice(key, advice);
   handler._type = advice._type;
-  handler._id = key._id;
+  handler._key_id = key._id;
+  handler._advice_index = advice._index;
   return MIMIR_SUCCESS;
 }
 MimirStatus job_configuration_advice_end(MimirHandler &handler) {
   mimir::MimirKey key;
   key._id = 0;
   AdviceHandler<JobConfigurationAdvice>::Instance(handler._type)
-      ->remove_advice(key);
+      ->remove_advice(key, handler._advice_index);
   return MIMIR_SUCCESS;
 }
 }  // namespace mimir

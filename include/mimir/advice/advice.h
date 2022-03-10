@@ -7,6 +7,7 @@
 
 #include <mimir/advice/advice_type.h>
 #include <mimir/common/typedef.h>
+#include <mimir/common/data_structure.h>
 
 #include <memory>
 
@@ -63,4 +64,11 @@ struct hash<mimir::Advice> {
   size_t operator()(const mimir::Advice& k) const { return k._index; }
 };
 }  // namespace std
+
+inline std::ostream& operator<<(std::ostream& os, mimir::Advice const& m) {
+  return os << "{TYPE:Advice,"
+            << "_index:" << m._index << ","
+            << "_priority:" << m._priority << ","
+            << "_type:" << m._type << "}";
+}
 #endif  // MIMIR_ADVICE_H

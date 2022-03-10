@@ -15,6 +15,7 @@
 #include <set>
 #include <unordered_map>
 #include <unordered_set>
+#include "mimir/common/debug.h"
 
 namespace mimir {
 template <typename ADVICE>
@@ -23,10 +24,10 @@ class AdviceHandler {
   static std::unordered_map<PrimaryAdviceType,
                             std::shared_ptr<AdviceHandler<ADVICE>>>
       instance_map;
+  typedef std::map<size_t, ADVICE, std::greater<size_t>> AdviceMap;
+  std::unordered_map<MimirKey, AdviceMap> _advice;
 
-  std::unordered_map<MimirKey, std::set<ADVICE, std::greater<ADVICE>>> _advice;
-
-  std::unordered_map<ADVICE, std::unordered_set<ADVICE>> _conflicts;
+  std::unordered_map<MimirKey, std::unordered_set<ADVICE>> _conflicts;
 
  public:
   AdviceHandler() : _conflicts(), _advice() {}
@@ -43,11 +44,12 @@ class AdviceHandler {
   }
 
   std::set<ADVICE, std::greater<ADVICE>> resolve_conflicts(MimirKey &key) {
+    auto trace = mimir::AutoTrace("mimir::resolve_conflicts", key);
     auto added_handlers = std::set<ADVICE, std::greater<ADVICE>>();
     auto iter = _advice.find(key);
     if (iter != _advice.end()) {
       for (const auto &advice : iter->second) {
-        auto conflict_iter = _conflicts.find(advice);
+        auto conflict_iter = _conflicts.find(MimirKey(advice.second._index));
         bool found_conflict = false;
         if (conflict_iter != _conflicts.end()) {
           for (const auto &added_handler : added_handlers) {
@@ -59,7 +61,7 @@ class AdviceHandler {
           }
         }
         if (!found_conflict) {
-          added_handlers.emplace(advice);
+          added_handlers.emplace(advice.second);
         }
       }
     }
@@ -67,43 +69,59 @@ class AdviceHandler {
   }
 
   MimirStatus save_advice(MimirKey &key, ADVICE advice) {
+    auto trace = mimir::AutoTrace("mimir::save_advice", key, advice);
     auto iter = _advice.find(key);
-    std::set<ADVICE, std::greater<ADVICE>> val;
+    AdviceMap val;
     if (iter == _advice.end()) {
-      val = std::set<ADVICE, std::greater<ADVICE>>();
+      val = AdviceMap();
     } else {
       val = iter->second;
-      iter->second.erase(advice);
+      iter->second.erase(advice._index);
       _advice.erase(iter);
     }
-    val.emplace(advice);
+    val.emplace(advice._index, advice);
     _advice.emplace(key, val);
     return MIMIR_SUCCESS;
   }
 
-  MimirStatus remove_advice(MimirKey &key) {
-    auto iter = _advice.erase(key);
+  MimirStatus remove_advice(MimirKey &key, size_t index) {
+    auto trace = mimir::AutoTrace("mimir::remove_advice", key);
+    auto iter = _advice.find(key);
+    if (iter != _advice.end()) {
+      iter->second.erase(index);
+      if (iter->second.empty()) {
+        _advice.erase(key);
+      }
+    }
     return MIMIR_SUCCESS;
   }
 
   MimirStatus is_advice_present(MimirKey &key) {
+    auto trace = mimir::AutoTrace("mimir::is_advice_present", key);
     return _advice.find(key) != _advice.end();
   }
 
-  std::pair<bool, std::vector<ADVICE>> find_advice(MimirKey &key) {
+  std::pair<bool, AdviceMap> find_advice(MimirKey &key) {
+    auto trace = mimir::AutoTrace("mimir::find_advice", key);
     auto iter = _advice.find(key);
     if (iter == _advice.end()) {
-      return std::make_pair(false, std::vector<ADVICE>());
+      return std::make_pair(false, AdviceMap());
     }
-    auto advices = std::vector<ADVICE>();
-    for (auto advice : iter->second) {
-      advices.push_back(advice);
-    }
-    return std::pair<bool, std::vector<ADVICE>>(true, advices);
+    return std::pair<bool, AdviceMap>(true, iter->second);
   }
 
-  MimirStatus add_conflicts(ADVICE &advice) {
-    _conflicts.emplace(advice);
+  MimirStatus add_conflicts(MimirKey &key, ADVICE &advice) {
+    auto trace = mimir::AutoTrace("mimir::add_conflicts", key, advice);
+    auto conflict_iter = _conflicts.find(key);
+    std::unordered_set<ADVICE> val;
+    if (conflict_iter == _conflicts.end()) {
+      val = std::unordered_set<ADVICE>();
+    } else {
+      val = conflict_iter->second;
+      _conflicts.erase(key);
+    }
+    val.emplace(advice);
+    _conflicts.emplace(key, val);
     return MIMIR_SUCCESS;
   }
 };

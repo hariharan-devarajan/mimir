@@ -44,7 +44,8 @@ MimirStatus file_advice_begin(FileAdvice &advice, MimirHandler &handler) {
   }
   AdviceHandler<FileAdvice>::Instance(advice._type)->save_advice(key, advice);
   handler._type = advice._type;
-  handler._id = key._id;
+  handler._key_id = key._id;
+  handler._advice_index = advice._index;
   return MIMIR_SUCCESS;
 }
 
@@ -60,23 +61,25 @@ MimirStatus operation_advice_begin(POSIXFileOperationAdvice &payload,
   key._id = hash_val;
   AdviceHandler<POSIXFileOperationAdvice>::Instance(payload._type)
       ->save_advice(key, payload);
-  handler._id = hash_val;
+  handler._key_id = key._id;
+  handler._advice_index = payload._index;
   handler._type = payload._type;
   return MIMIR_SUCCESS;
 }
 
 MimirStatus operation_advice_end(MimirHandler &handler) {
   MimirKey key;
-  key._id = handler._id;
+  key._id = handler._key_id;
   AdviceHandler<FileOperationAdvice>::Instance(handler._type)
-      ->remove_advice(key);
+      ->remove_advice(key, handler._advice_index);
   return MIMIR_SUCCESS;
 }
 
 MimirStatus file_advice_end(MimirHandler &handler) {
   MimirKey key;
-  key._id = handler._id;
-  AdviceHandler<FileAdvice>::Instance(handler._type)->remove_advice(key);
+  key._id = handler._key_id;
+  AdviceHandler<FileAdvice>::Instance(handler._type)
+      ->remove_advice(key, handler._advice_index);
   return MIMIR_SUCCESS;
 }
 }  // namespace mimir

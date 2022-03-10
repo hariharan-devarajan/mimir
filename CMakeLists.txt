@@ -38,7 +38,7 @@ set(MIMIR_LIBRARY_SRC include/mimir/mimir.h
         include/mimir/api/job_configuration.h
         src/mimir/advice/advice.cpp
         src/mimir/advice/advice_handler.h
-        include/mimir/api/mimir_interceptor.h src/mimir/api/mimir_interceptor.cpp)
+        include/mimir/api/mimir_interceptor.h src/mimir/api/mimir_interceptor.cpp include/mimir/common/debug.h src/mimir/common/debug.cpp)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DHCL_ENABLE_RPCLIB")
 message("HCL_ENABLE_RPCLIB: ${HCL_ENABLE_RPCLIB}")
@@ -69,11 +69,15 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
 install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 
 if (MIMIR_TIMER)
+    message(STATUS "MIMIR_TIMER ${MIMIR_TIMER}")
     target_compile_definitions(${PROJECT_NAME} PRIVATE MIMIR_TIMER)
+    target_compile_definitions(athena PRIVATE MIMIR_TIMER)
 endif ()
 
 if (MIMIR_TRACE)
+    message(STATUS "MIMIR_TRACE ${MIMIR_TRACE}")
     target_compile_definitions(${PROJECT_NAME} PRIVATE MIMIR_TRACE)
+    target_compile_definitions(athena PRIVATE MIMIR_TRACE)
 endif ()
 
 set_target_properties(${PROJECT_NAME} PROPERTIES LINKER_LANGUAGE CXX)

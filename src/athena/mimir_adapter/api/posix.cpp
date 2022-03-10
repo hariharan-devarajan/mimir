@@ -99,8 +99,13 @@ int ATHENA_DECL(open64)(const char *path, int flags, ...) {
         mimir::Logger::Instance("ATHENA")->log(
             mimir::LOG_INFO, "No Mapping found for file %s", path);
         if (file_advice_handler->is_advice_present(file_key)) {
+          mimir::Logger::Instance("ATHENA")->log(
+              mimir::LOG_INFO, "Advice present for file %s", path);
           auto advices = file_advice_handler->resolve_conflicts(file_key);
           for (const auto &advice : advices) {
+            mimir::Logger::Instance("ATHENA")->log(
+                mimir::LOG_INFO, "Applying advice %d for file %s",
+                advice._type._secondary, path);
             switch (advice._type._secondary) {
               case mimir::OperationAdviceType::INDEPENDENT_FILE: {
                 mimir::Logger::Instance("ATHENA")->log(
@@ -378,6 +383,7 @@ int ATHENA_DECL(open)(const char *path, int flags, ...) {
   int mode = va_arg(arg, int);
   va_end(arg);
   ret = open64(path, flags, mode);
+  fcntl(ret, F_SETFL, O_NONBLOCK);
   return ret;
 }
 
