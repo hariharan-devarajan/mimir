@@ -15,7 +15,7 @@
 #ifdef ATHENA_PRELOAD
 
 void OnExit(void);
-extern const char* kPathExclusions[20];
+extern const char* kPathExclusions[21];
 extern const char* kExtensionExclusions[3];
 extern std::unordered_set<int> track_files;
 #define BT_BUF_SIZE 100
