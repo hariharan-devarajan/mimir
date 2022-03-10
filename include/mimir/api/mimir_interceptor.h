@@ -116,7 +116,7 @@ inline mimir::JobConfigurationAdvice load_job_details() {
   job_conf_advice._devices.emplace_back(SHM, 1024);
   job_conf_advice._devices.emplace_back(PFS, 128);
   job_conf_advice._job_time_minutes = 30;
-  job_conf_advice._num_cores_per_node = 1;
+  job_conf_advice._num_cores_per_node = 2;
   job_conf_advice._num_gpus_per_node = 0;
   job_conf_advice._num_nodes = 1;
   job_conf_advice._node_names = {"localhost"};
