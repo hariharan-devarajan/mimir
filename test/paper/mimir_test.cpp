@@ -399,6 +399,12 @@ TEST_CASE("optimization",
   MPI_Comm_size(MPI_COMM_WORLD, &comm_size);
   auto PFS = std::getenv("PFS_PATH");
   auto SHM = std::getenv("SHM_PATH");
+
+  std::string cmd_clean =
+      "rm -rf " + std::string(PFS) + "/* " + std::string(SHM) + "/* ";
+  system(cmd_clean.c_str());
+  MPI_Barrier(MPI_COMM_WORLD);
+
   auto read_file = fs::path(PFS) / "test_read_" + std::to_string(my_rank) +
                    "_" + std::to_string(comm_size) + ".dat";
 
