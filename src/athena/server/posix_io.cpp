@@ -10,7 +10,6 @@
 
 #include <cstdio>
 #include <experimental/filesystem>
-#include <thallium.hpp>
 
 #include "athena/client/posix_athena_client.h"
 

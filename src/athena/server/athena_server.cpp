@@ -13,8 +13,6 @@
 #include <mpi.h>
 
 #include <cmath>
-#include <thallium.hpp>
-#include <thallium/serialization/stl/string.hpp>
 
 #include "hcl/communication/rpc_factory.h"
 #include "mimir/api/mimir_interceptor.h"
