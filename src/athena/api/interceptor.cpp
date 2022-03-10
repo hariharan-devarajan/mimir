@@ -5,7 +5,7 @@
 #include <athena/api/interceptor.h>
 #include "mimir/common/data_structure.h"
 
-extern const char* kPathExclusions[19] = {"/bin/",
+extern const char* kPathExclusions[20] = {"/bin/",
                                           "/boot/",
                                           "/dev/",
                                           "/etc/",
@@ -18,6 +18,7 @@ extern const char* kPathExclusions[19] = {"/bin/",
                                           "/var/",
                                           "/run/",
                                           "pipe",
+                                          "/tmp/ompi",
                                           "socket:",
                                           "anon_inode:",
                                           "merge_whole-wf.in",
