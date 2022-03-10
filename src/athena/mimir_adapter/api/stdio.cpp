@@ -28,10 +28,6 @@ FILE *ATHENA_DECL(fopen64)(const char *path, const char *mode) {
   } else {
     MAP_OR_FAIL(fopen64)
     ret = real_fopen64_(path, mode);
-    if (ret == nullptr) {
-      mimir::Logger::Instance("ATHENA")->log(
-          mimir::LOG_ERROR, "Error %s opening file: %s", strerror(errno), path);
-    }
   }
   return ret;
 }
@@ -47,11 +43,6 @@ int ATHENA_DECL(fclose)(FILE *stream) {
   } else {
     MAP_OR_FAIL(fclose)
     ret = real_fclose_(stream);
-    if (ret != 0) {
-      mimir::Logger::Instance("ATHENA")->log(
-          mimir::LOG_ERROR, "Error %s closing file with no: %d",
-          strerror(errno), stream->_fileno);
-    }
   }
   return ret;
 }
@@ -62,11 +53,6 @@ size_t ATHENA_DECL(fread)(void *ptr, size_t size, size_t nmemb, FILE *stream) {
   } else {
     MAP_OR_FAIL(fread)
     ret = real_fread_(ptr, size, nmemb, stream);
-    if (ret != nmemb) {
-      mimir::Logger::Instance("ATHENA")->log(
-          mimir::LOG_ERROR, "Error %s reading file with no: %d",
-          strerror(errno), stream->_fileno);
-    }
   }
   return ret;
 }
@@ -79,11 +65,6 @@ size_t ATHENA_DECL(fwrite)(const void *ptr, size_t size, size_t nmemb,
   } else {
     MAP_OR_FAIL(fwrite)
     ret = real_fwrite_(ptr, size, nmemb, stream);
-    if (ret != nmemb) {
-      mimir::Logger::Instance("ATHENA")->log(
-          mimir::LOG_ERROR, "Error %s writing file with no: %d",
-          strerror(errno), stream->_fileno);
-    }
   }
   return ret;
 }
