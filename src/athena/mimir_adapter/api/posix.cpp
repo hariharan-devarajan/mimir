@@ -72,9 +72,10 @@ int ATHENA_DECL(open64)(const char *path, int flags, ...) {
   bool perform_io = true;
   std::string filename(path);
   if (IsTracked(path)) {
+    mimir::Logger::Instance("ATHENA")->log(mimir::LOG_INFO, "Tracking file %s",
+                                           path);
     auto client = athena::PosixClient::Instance();
     if (client != nullptr) {
-
       bool is_read_only = false;
       if (flags & O_RDONLY) {
         is_read_only = true;
@@ -417,13 +418,15 @@ ssize_t ATHENA_DECL(read)(int fd, void *buf, size_t count) {
   if (perform_io) {
     MAP_OR_FAIL(read);
     ret = real_read_(fd, buf, count);
-    if (ret == -1) {
-      mimir::Logger::Instance("ATHENA")->log(
-          mimir::LOG_ERROR, "Error %s Reading fd: %d", strerror(errno), fd);
-    } else if (ret != count && is_tracked) {
-      mimir::Logger::Instance("ATHENA")->log(
-          mimir::LOG_ERROR, "Error %s Reading fd: %d written only %d of %d",
-          strerror(errno), fd, ret, count);
+    if (is_tracked) {
+      if (ret == -1) {
+        mimir::Logger::Instance("ATHENA")->log(
+            mimir::LOG_ERROR, "Error %s Reading fd: %d", strerror(errno), fd);
+      } else if (ret != count) {
+        mimir::Logger::Instance("ATHENA")->log(
+            mimir::LOG_ERROR, "Error %s Reading fd: %d written only %d of %d",
+            strerror(errno), fd, ret, count);
+      }
     }
   }
   return ret;
@@ -469,19 +472,22 @@ ssize_t ATHENA_DECL(write)(int fd, const void *buf, size_t count) {
   if (perform_io) {
     MAP_OR_FAIL(write);
     ret = real_write_(fd, buf, count);
-    if (ret == -1) {
-      mimir::Logger::Instance("ATHENA")->log(
-          mimir::LOG_ERROR, "Error %s Writing fd: %d", strerror(errno), fd);
-    } else if (ret != count) {
-      mimir::Logger::Instance("ATHENA")->log(
-          mimir::LOG_ERROR, "Error %s Writing fd: %d written only %d of %d",
-          strerror(errno), fd, ret, count);
-    } else if (is_tracked)
-      mimir::Logger::Instance("ATHENA")->log(
-          mimir::LOG_INFO,
-          "Perform Write on Local on rank %d with server_index %d for "
-          "file_descriptor %d and ret %d",
-          current_rank, my_server_index, fd, ret);
+    if (is_tracked) {
+      if (ret == -1) {
+        mimir::Logger::Instance("ATHENA")->log(
+            mimir::LOG_ERROR, "Error %s Writing fd: %d", strerror(errno), fd);
+      } else if (ret != count) {
+        mimir::Logger::Instance("ATHENA")->log(
+            mimir::LOG_ERROR, "Error %s Writing fd: %d written only %d of %d",
+            strerror(errno), fd, ret, count);
+      } else {
+        mimir::Logger::Instance("ATHENA")->log(
+            mimir::LOG_INFO,
+            "Perform Write on Local on rank %d with server_index %d for "
+            "file_descriptor %d and ret %d",
+            current_rank, my_server_index, fd, ret);
+      }
+    }
   }
   return ret;
 }
