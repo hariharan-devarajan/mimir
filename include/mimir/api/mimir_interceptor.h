@@ -119,7 +119,7 @@ inline mimir::JobConfigurationAdvice load_job_details() {
   job_conf_advice._num_cores_per_node = 2;
   job_conf_advice._num_gpus_per_node = 0;
   job_conf_advice._num_nodes = 2;
-  job_conf_advice._node_names = {"lassen591", "lassen591"};
+  job_conf_advice._node_names = {"lassen765", "lassen765"};
   job_conf_advice._rpc_port = 8888;
   job_conf_advice._rpc_threads = 1;
   job_conf_advice._priority = 100;
