@@ -30,6 +30,8 @@ extern const char* kPathExclusions[22] = {"/bin/",
 
 extern const char* kExtensionExclusions[3] = {"conf", "out", "in"};
 extern std::unordered_set<int> track_files = std::unordered_set<int>();
+extern std::unordered_set<std::string> untrack_files =
+    std::unordered_set<std::string>();
 
 namespace athena {
 bool exit = false;
@@ -47,6 +49,14 @@ bool IsTracked(std::string path, int fd) {
       mimir::Logger::Instance("ATHENA")->log(mimir::LOG_INFO,
                                              "Tracking file %d", fd);
       return true;
+    }
+  }
+  if (!untrack_files.empty()) {
+    auto iter = untrack_files.find(path);
+    if (iter != untrack_files.end()) {
+      mimir::Logger::Instance("ATHENA")->log(
+          mimir::LOG_INFO, "Untracking file %s", path.c_str());
+      return false;
     }
   }
   for (const auto& pth : kPathExclusions) {

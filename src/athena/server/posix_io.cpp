@@ -52,7 +52,9 @@ bool athena::posix_prefetch(DATA filename) {
     mimir::Logger::Instance("ATHENA")->log(mimir::LOG_INFO,
                                            "Copying file %s into file %s",
                                            filename.data(), new_path.c_str());
+    untrack_files.emplace(filename);
     fs::copy(filename.data(), new_path, fs::copy_options::update_existing);
+    untrack_files.erase(filename);
   }
   return true;
 }

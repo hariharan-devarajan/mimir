@@ -404,6 +404,8 @@ TEST_CASE("optimization",
       "rm -rf " + std::string(PFS) + "/* " + std::string(SHM) + "/* ";
   system(cmd_clean.c_str());
   MPI_Barrier(MPI_COMM_WORLD);
+  mimir::Logger::Instance("PEGASUS_TEST")
+      ->log(mimir::LOG_INFO, "Cleaned PFS %s and SHM %s", PFS, SHM);
 
   auto read_file = fs::path(PFS) / "test_read_" + std::to_string(my_rank) +
                    "_" + std::to_string(comm_size) + ".dat";
@@ -484,10 +486,12 @@ TEST_CASE("optimization",
       write_shared_handler;
 
   for (int i = 0; i < comm_size; ++i) {
-    auto read_file = fs::path(PFS) / "test_read_" + std::to_string(i) + "_" +
-                     std::to_string(comm_size) + ".dat";
-    read_file_advice._name = read_file.string();
-    mimir::file_advice_begin(read_file_advice, read_file_handler);
+    if (i != my_rank) {
+      auto read_file = fs::path(PFS) / "test_read_" + std::to_string(i) + "_" +
+                       std::to_string(comm_size) + ".dat";
+      read_file_advice._name = read_file.string();
+      mimir::file_advice_begin(read_file_advice, read_file_handler);
+    }
   }
 
   for (int i = 0; i < num_producers; ++i) {
