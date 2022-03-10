@@ -247,16 +247,17 @@ TEST_CASE("Performance",
              MPI_COMM_WORLD);
 
   if (info.rank == 0) {
-    fprintf(stdout,
-            "Timing:\n"
-            "init,save,find,add_conflicts,resolve_conflicts,remove\n"
-            "%f,%f,%f,%f,%f,%f\n",
-            args.num_operations * info.comm_size / total_init,
-            args.num_operations * info.comm_size / total_save,
-            args.num_operations * info.comm_size / total_find,
-            args.num_operations * info.comm_size / total_conflicts,
-            args.num_operations * info.comm_size / total_resolve,
-            args.num_operations * info.comm_size / total_remove);
+    fprintf(
+        stdout,
+        "Timing:\n"
+        "init,save,find,add_conflicts,resolve_conflicts,remove\n"
+        "%f,%f,%f,%f,%f,%f\n",
+        args.num_operations * info.comm_size * info.comm_size / total_init,
+        args.num_operations * info.comm_size * info.comm_size / total_save,
+        args.num_operations * info.comm_size * info.comm_size / total_find,
+        args.num_operations * info.comm_size * info.comm_size / total_conflicts,
+        args.num_operations * info.comm_size * info.comm_size / total_resolve,
+        args.num_operations * info.comm_size * info.comm_size / total_remove);
   }
 }
 
