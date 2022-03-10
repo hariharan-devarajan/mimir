@@ -19,6 +19,7 @@ class FileAdvice : public Advice {
   int _current_device;
   int _placement_device;
   float _per_io_data, _per_io_metadata;
+  bool _prefetch;
 
   FileAdvice()
       : Advice(AdviceType(PrimaryAdviceType::DATA_FILE,
@@ -32,7 +33,8 @@ class FileAdvice : public Advice {
         _per_io_data(),
         _per_io_metadata(),
         _current_device(0),
-        _placement_device(0) {}
+        _placement_device(0),
+        _prefetch(false) {}
   FileAdvice(const FileAdvice& other)
       : Advice(other),
         _format(other._format),
@@ -43,7 +45,8 @@ class FileAdvice : public Advice {
         _per_io_data(other._per_io_data),
         _per_io_metadata(other._per_io_metadata),
         _current_device(other._current_device),
-        _placement_device(other._placement_device) {}
+        _placement_device(other._placement_device),
+        _prefetch(other._prefetch) {}
   FileAdvice(const FileAdvice&& other)
       : Advice(other),
         _format(other._format),
@@ -54,7 +57,8 @@ class FileAdvice : public Advice {
         _per_io_data(other._per_io_data),
         _per_io_metadata(other._per_io_metadata),
         _current_device(other._current_device),
-        _placement_device(other._placement_device) {}
+        _placement_device(other._placement_device),
+        _prefetch(other._prefetch) {}
   FileAdvice& operator=(const FileAdvice& other) {
     Advice::operator=(other);
     _format = other._format;
@@ -66,6 +70,7 @@ class FileAdvice : public Advice {
     _per_io_metadata = other._per_io_metadata;
     _current_device = other._current_device;
     _placement_device = other._placement_device;
+    _prefetch = other._prefetch;
     return *this;
   }
   bool operator<(const FileAdvice& other) const {
@@ -80,9 +85,8 @@ class FileAdvice : public Advice {
            _per_io_data == other._per_io_data &&
            _per_io_metadata == other._per_io_metadata &&
            _current_device == other._current_device &&
-           _placement_device == other._placement_device;
-    ;
-    ;
+           _placement_device == other._placement_device &&
+           _prefetch == other._prefetch;
   }
 };
 }  // namespace mimir

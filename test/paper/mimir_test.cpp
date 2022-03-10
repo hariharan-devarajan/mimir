@@ -511,6 +511,7 @@ TEST_CASE("optimization",
    * Preload data
    */
   preload_timer.resumeTime();
+  read_file_advice._prefetch = true;
   mimir::file_advice_begin(read_file_advice, read_file_handler);
   preload_timer.pauseTime();
   MPI_Barrier(MPI_COMM_WORLD);

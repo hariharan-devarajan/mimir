@@ -28,18 +28,20 @@ MimirStatus file_advice_begin(FileAdvice &advice, MimirHandler &handler) {
   key._id = hash_str(advice._name);
   mimir::MimirKey job_key;
   job_key._id = 0;
-  typedef MimirStatus (*real_t_file_prefetch_)(FileAdvice &);
+  if (advice._prefetch) {
+    typedef MimirStatus (*real_t_file_prefetch_)(FileAdvice &);
 
-  if ((advice._type._secondary == OperationAdviceType::INPUT_FILE ||
-       advice._type._secondary == OperationAdviceType::READ_ONLY_FILE)) {
-    auto ld_so = std::getenv("LD_PRELOAD");
-    auto handle = dlopen(ld_so, RTLD_GLOBAL | RTLD_LAZY);
-    real_t_file_prefetch_ derived_file_prefetch_ =
-        (real_t_file_prefetch_)dlsym(handle, "file_prefetch");
-    if (derived_file_prefetch_ == NULL) {
-      file_prefetch(advice);
-    } else {
-      derived_file_prefetch_(advice);
+    if ((advice._type._secondary == OperationAdviceType::INPUT_FILE ||
+         advice._type._secondary == OperationAdviceType::READ_ONLY_FILE)) {
+      auto ld_so = std::getenv("LD_PRELOAD");
+      auto handle = dlopen(ld_so, RTLD_GLOBAL | RTLD_LAZY);
+      real_t_file_prefetch_ derived_file_prefetch_ =
+          (real_t_file_prefetch_)dlsym(handle, "file_prefetch");
+      if (derived_file_prefetch_ == NULL) {
+        file_prefetch(advice);
+      } else {
+        derived_file_prefetch_(advice);
+      }
     }
   }
   AdviceHandler<FileAdvice>::Instance(advice._type)->save_advice(key, advice);
