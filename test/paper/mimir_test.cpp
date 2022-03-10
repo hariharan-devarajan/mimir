@@ -31,11 +31,10 @@ mimir::test::Info info;
 int init(int* argc, char*** argv) {
   //  fprintf(stdout, "Initializing MPI\n");
   MPI_Init(argc, argv);
-  int my_rank, comm_size;
   MPI_Comm_rank(MPI_COMM_WORLD, &info.rank);
   MPI_Comm_size(MPI_COMM_WORLD, &info.comm_size);
-  if (args.debug && my_rank == 0) {
-    printf("%d ready for attach\n", comm_size);
+  if (args.debug && info.rank == 0) {
+    printf("%d ready for attach\n", info.comm_size);
     fflush(stdout);
     getchar();
   }
@@ -53,7 +52,9 @@ cl::Parser define_options() {
              args.num_operations,
              "num_operations")["-n"]["--num_operations"]("# of operations.") |
          cl::Opt(args.request_size,
-                 "request_size")["-r"]["--request_size"]("request_size");
+                 "request_size")["-r"]["--request_size"]("request_size") |
+         cl::Opt(args.debug,
+                 "debug")["-d"]["--debug"]("debug");
 }
 /**
  * Test cases
@@ -534,7 +535,7 @@ TEST_CASE("optimization",
    */
   {
     auto read_data = std::vector<char>(request_size, 'r');
-    int read_fd = open(read_file.c_str(), O_RDONLY);
+    int read_fd = open(read_file.c_str(), O_RDONLY | O_DIRECT);
     REQUIRE(read_fd != -1);
     for (int i = 0; i < args.num_operations; ++i) {
       read_timer.resumeTime();
@@ -556,7 +557,7 @@ TEST_CASE("optimization",
   {
     {
       auto write_data = std::vector<char>(request_size, 'w');
-      int write_fd = open(write_ind_file.c_str(), O_WRONLY | O_CREAT,
+      int write_fd = open(write_ind_file.c_str(), O_WRONLY | O_CREAT | O_DIRECT,
                           S_IRWXU | S_IRWXG | S_IRWXO);
       REQUIRE(write_fd != -1);
       for (int i = 0; i < args.num_operations; ++i) {
@@ -570,7 +571,7 @@ TEST_CASE("optimization",
     }
     {
       auto read_data = std::vector<char>(request_size, 'r');
-      int read_fd = open(write_ind_file.c_str(), O_RDONLY);
+      int read_fd = open(write_ind_file.c_str(), O_RDONLY | O_DIRECT);
       REQUIRE(read_fd != -1);
       for (int i = 0; i < args.num_operations; ++i) {
         independent_timer.resumeTime();
@@ -594,7 +595,7 @@ TEST_CASE("optimization",
   {
     if (is_producer) {
       auto write_data = std::vector<char>(request_size, 'w');
-      int write_fd = open(write_shared_file.c_str(), O_WRONLY | O_CREAT,
+      int write_fd = open(write_shared_file.c_str(), O_WRONLY | O_CREAT | O_DIRECT,
                           S_IRWXU | S_IRWXG | S_IRWXO);
       REQUIRE(write_fd != -1);
       for (int i = 0; i < args.num_operations; ++i) {

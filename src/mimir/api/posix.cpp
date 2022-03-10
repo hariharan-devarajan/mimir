@@ -48,7 +48,7 @@ MimirStatus file_advice_begin(FileAdvice &advice, MimirHandler &handler) {
   handler._type = advice._type;
   handler._key_id = key._id;
   handler._advice_index = advice._index;
-  track_files.emplace(advice._name);
+  MIMIR_TRACKER->track(advice._name);
   return MIMIR_SUCCESS;
 }
 
@@ -83,7 +83,7 @@ MimirStatus file_advice_end(MimirHandler &handler) {
   key._id = handler._key_id;
   auto advice = AdviceHandler<FileAdvice>::Instance(handler._type)
                     ->remove_advice(key, handler._advice_index);
-  track_files.emplace(advice._name);
+  MIMIR_TRACKER->remove(advice._name);
   return MIMIR_SUCCESS;
 }
 }  // namespace mimir

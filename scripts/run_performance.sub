@@ -1,0 +1,22 @@
+#!/bin/bash
+### LSF syntax
+#BSUB -cwd /usr/workspace/iopp/software/iopp/apps/genome_pegasus 
+#BSUB -nnodes 32         #number of nodes
+#BSUB -W 01:00             #walltime in minutes
+#BSUB -G asccasc           #account
+#BSUB -J mimir-perf   #name of job
+#BSUB -q pbatch            #queue to use
+
+
+CPWD=$PWD
+source /usr/workspace/iopp/install_scripts/bin/iopp-init
+source /usr/workspace/iopp/install_scripts/bin/spack-init
+
+spack env activate -p mimir-build3
+
+pushd /usr/workspace/iopp/software/mimir/build
+
+ctest -R  paper_performance -VV
+
+popd
+

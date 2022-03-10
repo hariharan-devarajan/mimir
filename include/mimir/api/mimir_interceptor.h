@@ -14,7 +14,87 @@
 
 extern bool is_mpi();
 extern void set_mpi();
-extern std::unordered_set<std::string> track_files;
+extern bool is_exit();
+extern void set_exit();
+namespace mimir {
+    class Tracker {
+        static std::shared_ptr<Tracker> _instance;
+        std::unordered_set<int> _track_fd;
+        std::unordered_set<std::string> _track_files;
+        std::unordered_set<std::string> _exclude_files;
+    public:
+        Tracker(): _track_fd(), _track_files(), _exclude_files() {}
+        static std::shared_ptr<Tracker> Instance() {
+            if (_instance == nullptr) {
+                _instance = std::make_shared<Tracker>();
+            }
+            return _instance;
+        }
+        void track(int fd) {
+            if (is_exit()) return;
+            _track_fd.emplace(fd);
+        }
+        void track(std::string path) {
+            if (is_exit()) return;
+            _track_files.emplace(path);
+        }
+
+        void exclude(std::string path) {
+            if (is_exit()) return;
+            _exclude_files.emplace(path);
+        }
+        void unexclude(std::string path) {
+            if (is_exit()) return;
+            _exclude_files.erase(path);
+        }
+        void remove(int fd) {
+            if (is_exit()) return;
+            _track_fd.erase(fd);
+        }
+        void remove(std::string path) {
+            if (is_exit()) return;
+            _track_files.erase(path);
+        }
+        bool is_traced(int fd) {
+            if (is_exit()) return false;
+            if (fd != -1 && !_track_fd.empty()) {
+                auto iter = _track_fd.find(fd);
+                if (iter != _track_fd.end()) {
+                    mimir::Logger::Instance("ATHENA")->log(mimir::LOG_INFO,
+                                                           "Tracking file descriptor %d", fd);
+                    return true;
+                }
+            }
+            return false;
+        }
+        bool is_traced(std::string path) {
+            if (is_exit()) return false;
+            if (!_track_files.empty()) {
+                auto iter = _track_files.find(path);
+                if (iter != _track_files.end()) {
+                    mimir::Logger::Instance("ATHENA")->log(mimir::LOG_INFO,
+                                                           "Tracking file %s", path.c_str());
+                    return true;
+                }
+            }
+            return false;
+        }
+        bool is_excluded(std::string path) {
+            if (is_exit()) return true;
+            if (!_exclude_files.empty()) {
+                auto iter = _exclude_files.find(path);
+                if (iter != _exclude_files.end()) {
+                    mimir::Logger::Instance("ATHENA")->log(mimir::LOG_INFO,
+                                                           "Excluding file %s", path.c_str());
+                    return true;
+                }
+            }
+            return false;
+        }
+    };
+}
+
+#define MIMIR_TRACKER mimir::Tracker::Instance()
 #include <cxxabi.h>
 #include <execinfo.h>
 #include <stdio.h>
@@ -119,8 +199,9 @@ inline mimir::JobConfigurationAdvice load_job_details() {
   job_conf_advice._num_cores_per_node = 2;
   job_conf_advice._num_gpus_per_node = 0;
   job_conf_advice._num_nodes = 2;
-  job_conf_advice._node_names.push_back("lassen765");
-  job_conf_advice._node_names.push_back("lassen765");
+  job_conf_advice._node_names.clear();
+  job_conf_advice._node_names.push_back("lassen168");
+  job_conf_advice._node_names.push_back("lassen168");
   job_conf_advice._rpc_port = 8888;
   job_conf_advice._rpc_threads = 1;
   job_conf_advice._priority = 100;

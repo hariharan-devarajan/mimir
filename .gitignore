@@ -32,6 +32,7 @@
 *.app
 /.idea/
 /build/
+/build_remote/
 
 /.clion.source.upload.marker
 /test/posix/pegasus/pegasus/work/
