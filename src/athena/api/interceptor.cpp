@@ -5,26 +5,14 @@
 #include <athena/api/interceptor.h>
 #include "mimir/common/data_structure.h"
 
-extern const char* kPathExclusions[20] = {"/bin/",
-                                          "/boot/",
-                                          "/dev/",
-                                          "/etc/",
-                                          "/lib/",
-                                          "/opt/",
-                                          "/proc/",
-                                          "/sbin/",
-                                          "/sys/",
-                                          "/usr/",
-                                          "/var/",
-                                          "/run/",
-                                          "pipe",
-                                          "/tmp/ompi",
-                                          "socket:",
-                                          "anon_inode:",
-                                          "merge_whole-wf.in",
-                                          "pegasus",
-                                          "mimir",
-                                          "/g/g92/haridev/.lsbatch/"};
+extern const char* kPathExclusions[21] = {
+    "/bin/",   "/boot/",      "/dev/",
+    "/etc/",   "/lib/",       "/opt/",
+    "/proc/",  "/sbin/",      "/sys/",
+    "/usr/",   "/var/",       "/run/",
+    "/lib64",  "pipe",        "/tmp/ompi",
+    "socket:", "anon_inode:", "merge_whole-wf.in",
+    "pegasus", "mimir",       "/g/g92/haridev/.lsbatch/"};
 
 extern const char* kExtensionExclusions[3] = {"conf", "out", "in"};
 extern std::unordered_set<int> track_files = std::unordered_set<int>();
