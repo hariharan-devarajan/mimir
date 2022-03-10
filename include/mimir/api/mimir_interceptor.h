@@ -14,6 +14,7 @@
 
 extern bool is_mpi();
 extern void set_mpi();
+extern std::unordered_set<std::string> track_files;
 #include <cxxabi.h>
 #include <execinfo.h>
 #include <stdio.h>

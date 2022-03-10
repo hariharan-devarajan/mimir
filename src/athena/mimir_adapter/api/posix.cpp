@@ -367,8 +367,7 @@ int ATHENA_DECL(open64)(const char *path, int flags, ...) {
       ret = real_open64_(filename.c_str(), flags, mode);
     }
   }
-  if (!perform_io || strcmp(filename.c_str(), path) != 0)
-    track_files.emplace(ret);
+  if (!perform_io || strcmp(filename.c_str(), path) != 0) track_fd.emplace(ret);
   return ret;
 }
 
@@ -518,7 +517,7 @@ int ATHENA_DECL(close)(int fd) {
           perform_io = false;
         }
         client->_id_server_map.erase(fd);
-        track_files.erase(fd);
+        track_fd.erase(fd);
       }
     }
   }

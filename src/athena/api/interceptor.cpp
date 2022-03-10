@@ -29,7 +29,7 @@ extern const char* kPathExclusions[22] = {"/bin/",
                                           "/g/g92/haridev/.lsbatch/"};
 
 extern const char* kExtensionExclusions[3] = {"conf", "out", "in"};
-extern std::unordered_set<int> track_files = std::unordered_set<int>();
+extern std::unordered_set<int> track_fd = std::unordered_set<int>();
 extern std::unordered_set<std::string> untrack_files =
     std::unordered_set<std::string>();
 
@@ -43,14 +43,7 @@ bool IsTracked(std::string path, int fd) {
   if (path == "/" || path.find("socket:") == 0) {
     return false;
   }
-  if (fd != -1 && !track_files.empty()) {
-    auto iter = track_files.find(fd);
-    if (iter != track_files.end()) {
-      mimir::Logger::Instance("ATHENA")->log(mimir::LOG_INFO,
-                                             "Tracking file %d", fd);
-      return true;
-    }
-  }
+
   if (!untrack_files.empty()) {
     auto iter = untrack_files.find(path);
     if (iter != untrack_files.end()) {
@@ -59,17 +52,22 @@ bool IsTracked(std::string path, int fd) {
       return false;
     }
   }
-  for (const auto& pth : kPathExclusions) {
-    if (path.find(pth) == 0) {
-      return false;
+
+  if (!track_files.empty()) {
+    auto iter = track_files.find(path);
+    if (iter != track_files.end()) {
+      mimir::Logger::Instance("ATHENA")->log(mimir::LOG_INFO,
+                                             "Tracking file %s", path.c_str());
+      return true;
     }
   }
-  for (const auto& extension : kExtensionExclusions) {
-    if (path.substr(path.find_last_of('.') + 1) == extension) {
-      return false;
+  if (fd != -1 && !track_fd.empty()) {
+    auto iter = track_fd.find(fd);
+    if (iter != track_fd.end()) {
+      mimir::Logger::Instance("ATHENA")->log(mimir::LOG_INFO,
+                                             "Tracking file %d", fd);
+      return true;
     }
   }
-  /*mimir::Logger::Instance("ATHENA")->log(mimir::LOG_INFO, "Tracking file %s",
-                                         path.c_str());*/
-  return true;
+  return false;
 }

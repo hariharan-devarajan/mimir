@@ -84,16 +84,20 @@ class AdviceHandler {
     return MIMIR_SUCCESS;
   }
 
-  MimirStatus remove_advice(MimirKey &key, size_t index) {
+  ADVICE remove_advice(MimirKey &key, size_t index) {
     auto trace = mimir::AutoTrace("mimir::remove_advice", key);
     auto iter = _advice.find(key);
     if (iter != _advice.end()) {
-      iter->second.erase(index);
-      if (iter->second.empty()) {
-        _advice.erase(key);
+      auto specific_advice_iter = iter->second.find(index);
+      if (specific_advice_iter != iter->second.end()) {
+        iter->second.erase(index);
+        if (iter->second.empty()) {
+          _advice.erase(key);
+        }
+        return specific_advice_iter->second;
       }
     }
-    return MIMIR_SUCCESS;
+    return ADVICE();
   }
 
   MimirStatus is_advice_present(MimirKey &key) {
