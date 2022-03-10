@@ -364,11 +364,6 @@ int ATHENA_DECL(open64)(const char *path, int flags, ...) {
   } else {
     if (perform_io) {
       ret = real_open64_(filename.c_str(), flags, mode);
-      if (ret == -1) {
-        mimir::Logger::Instance("ATHENA")->log(
-            mimir::LOG_ERROR, "Error %s opening file: %s", strerror(errno),
-            filename.c_str());
-      }
     }
   }
   if (!perform_io || strcmp(filename.c_str(), path) != 0)
