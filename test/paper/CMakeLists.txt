@@ -27,7 +27,7 @@ set_property(TEST ${exec_prefix}_${test_name}_${iteration} APPEND PROPERTY ENVIR
 set_property(TEST ${exec_prefix}_${test_name}_${iteration} APPEND PROPERTY ENVIRONMENT PFS_PATH=${PFS})
 
 set(test_name optimization)
-set(iteration 1)
+set(iteration 100)
 add_test(NAME ${exec_prefix}_${test_name}_${iteration} COMMAND ${MPIEXEC_EXECUTABLE} -n 4 "${CMAKE_BINARY_DIR}/test/paper/${exec_prefix}_mimir_test" --durations yes --reporter compact --num_operations ${iteration} [test=${test_name}])
 set_property(TEST ${exec_prefix}_${test_name}_${iteration} APPEND PROPERTY ENVIRONMENT SHM_PATH=${SHM})
 set_property(TEST ${exec_prefix}_${test_name}_${iteration} APPEND PROPERTY ENVIRONMENT PFS_PATH=${PFS})
