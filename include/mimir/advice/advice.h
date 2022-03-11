@@ -71,4 +71,18 @@ inline std::ostream& operator<<(std::ostream& os, mimir::Advice const& m) {
             << "_priority:" << m._priority << ","
             << "_type:" << m._type << "}";
 }
+using json = nlohmann::json;
+namespace mimir {
+    inline void to_json(json& j, const Advice& p) {
+        j["index"] = p._index;
+        j["priority"] = p._priority;
+        j["type"] = p._type;
+    }
+
+    inline void from_json(const json& j, Advice& p) {
+        j.at("index").get_to(p._index);
+        j.at("priority").get_to(p._priority);
+        j.at("type").get_to(p._type);
+    }
+} // namespace ns
 #endif  // MIMIR_ADVICE_H

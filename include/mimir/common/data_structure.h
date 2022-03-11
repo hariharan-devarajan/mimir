@@ -15,6 +15,7 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include <nlohmann/json.hpp>
 
 #include "typedef.h"
 
@@ -48,6 +49,7 @@ struct Storage {
            _capacity_mb == other._capacity_mb;
   }
 };
+
 
 struct Node {
   uint32_t _unique_hash;
@@ -216,5 +218,21 @@ inline std::ostream& operator<<(std::ostream& os, mimir::MimirKey const& m) {
   return os << "{TYPE:MimirKey,"
             << "id:" << m._id << "}";
 }
+using json = nlohmann::json;
+
+namespace mimir {
+    inline void to_json(json& j, const mimir::Storage& p) {
+        j["mount_point"] = p._mount_point;
+        j["capacity_mb"] = p._capacity_mb;
+        j["used_capacity_mb"] = p._used_capacity_mb;
+    }
+
+    inline void from_json(const json& j, mimir::Storage& p) {
+        j.at("mount_point").get_to(p._mount_point);
+        j.at("capacity_mb").get_to(p._capacity_mb);
+        j.at("used_capacity_mb").get_to(p._used_capacity_mb);
+    }
+} // namespace ns
+
 
 #endif  // MIMIR_DATA_STRUCTURE_H

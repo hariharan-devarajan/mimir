@@ -8,6 +8,8 @@
 #include <stdint-gcc.h>
 
 #include <functional>
+#include <mimir/common/enumeration.h>
+#include <nlohmann/json.hpp>
 
 namespace mimir {
 enum PrimaryAdviceType : uint16_t {
@@ -47,6 +49,8 @@ enum OperationAdviceType : uint16_t {
 struct AdviceType {
   PrimaryAdviceType _primary;
   OperationAdviceType _secondary;
+  AdviceType():_primary(),_secondary()  {
+  }
   AdviceType(PrimaryAdviceType primary, OperationAdviceType secondary) {
     _primary = primary;
     _secondary = secondary;
@@ -81,5 +85,18 @@ struct hash<mimir::PrimaryAdviceType> {
   size_t operator()(const mimir::PrimaryAdviceType& k) const { return k; }
 };
 }  // namespace std
+
+using json = nlohmann::json;
+namespace mimir {
+    inline void to_json(json& j, const AdviceType& p) {
+        j["primary"] = p._primary;
+        j["secondary"] = p._secondary;
+    }
+
+    inline void from_json(const json& j, AdviceType& p) {
+        j.at("primary").get_to(p._primary);
+        j.at("secondary").get_to(p._secondary);
+    }
+} // namespace ns
 
 #endif  // MIMIR_ADVICE_TYPE_H
