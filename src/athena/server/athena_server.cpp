@@ -21,6 +21,8 @@
 std::shared_ptr<athena::Server> athena::Server::instance = nullptr;
 namespace athena {}  // namespace athena
 athena::Server::Server(bool is_mpi) : is_server(false) {
+    mimir::Logger::Instance("ATHENA")->log(mimir::LOG_INFO,
+                                          "Constructing athena::Server");
   auto job_conf_type =
       mimir::AdviceType(mimir::PrimaryAdviceType::JOB_CONFIGURATION,
                         mimir::OperationAdviceType::NO_OP);

@@ -9,6 +9,7 @@
 #include <mpi.h>
 
 #include <memory>
+#include <mutex>
 
 #include "mimir/advice/advice_handler.h"
 #include "mimir/advice/job_configuration_advice.h"
@@ -65,16 +66,65 @@ class Client {
     _rpc = hcl::Singleton<RPCFactory>::GetInstance()->GetRPC(
         _job_configuration_advice._rpc_port);
   }
-
+  std::unordered_map<std::string, std::string> _mapped_files;
+  std::unordered_map<INTERFACE_IDENTIFIER, uint16_t> _id_server_map;
+  std::mutex _mapped_files_mutex, _id_server_map_mutex;
  public:
   mimir::JobConfigurationAdvice _job_configuration_advice;
   std::shared_ptr<mimir::AdviceHandler<mimir::JobConfigurationAdvice>>
       _job_handler;
-  std::unordered_map<std::string, std::string> _mapped_files;
-  std::unordered_map<INTERFACE_IDENTIFIER, uint16_t> _id_server_map;
   std::shared_ptr<RPC> _rpc;
 
-  void finalize() {  //_rpc->Stop();
+  std::pair<bool, uint16_t> id_server_map_find(INTERFACE_IDENTIFIER id) {
+    std::lock_guard<std::mutex> guard(_id_server_map_mutex);
+    auto ret = std::pair<bool, uint16_t>();
+    ret.first = false;
+    auto iter = _id_server_map.find(id);
+    if (iter != _id_server_map.end()) {
+        ret.first = true;
+        ret.second = iter->second;
+    }
+    return ret;
+  }
+  bool id_server_map_emplace(INTERFACE_IDENTIFIER id, uint16_t server_index) {
+    std::lock_guard<std::mutex> guard(_id_server_map_mutex);
+      auto iter = _id_server_map.find(id);
+      if (iter != _id_server_map.end()) {
+          _id_server_map.erase(id);
+      }
+      _id_server_map.emplace(id, server_index);
+      return true;
+  }
+  bool id_server_map_erase(INTERFACE_IDENTIFIER id) {
+    std::lock_guard<std::mutex> guard(_id_server_map_mutex);
+      _id_server_map.erase(id);
+      return true;
+  }
+
+  std::pair<bool, std::string> mapped_files_find(std::string file_key) {
+    std::lock_guard<std::mutex> guard(_mapped_files_mutex);
+    auto ret = std::pair<bool, std::string>();
+    ret.first = false;
+    auto iter = _mapped_files.find(file_key);
+    if (iter != _mapped_files.end()) {
+        ret.first = true;
+        ret.second = iter->second;
+    }
+    return ret;
+  }
+  bool mapped_files_emplace(std::string file_key, std::string file) {
+    std::lock_guard<std::mutex> guard(_mapped_files_mutex);
+      auto iter = _mapped_files.find(file_key);
+      if (iter != _mapped_files.end()) {
+          _mapped_files.erase(file_key);
+      }
+      _mapped_files.emplace(file_key, file);
+      return true;
+  }
+  bool mapped_files_erase(std::string file_key) {
+    std::lock_guard<std::mutex> guard(_mapped_files_mutex);
+      _mapped_files.erase(file_key);
+      return true;
   }
 };
 }  // namespace athena

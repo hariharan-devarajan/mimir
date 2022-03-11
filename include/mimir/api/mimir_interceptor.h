@@ -11,98 +11,13 @@
 #include <cstring>
 
 #include "job_configuration.h"
-
-extern bool is_mpi();
-extern void set_mpi();
-extern bool is_exit();
-extern void set_exit();
-namespace mimir {
-    class Tracker {
-        static std::shared_ptr<Tracker> _instance;
-        std::unordered_set<int> _track_fd;
-        std::unordered_set<std::string> _track_files;
-        std::unordered_set<std::string> _exclude_files;
-    public:
-        Tracker(): _track_fd(), _track_files(), _exclude_files() {}
-        static std::shared_ptr<Tracker> Instance() {
-            if (_instance == nullptr) {
-                _instance = std::make_shared<Tracker>();
-            }
-            return _instance;
-        }
-        void track(int fd) {
-            if (is_exit()) return;
-            _track_fd.emplace(fd);
-        }
-        void track(std::string path) {
-            if (is_exit()) return;
-            _track_files.emplace(path);
-        }
-
-        void exclude(std::string path) {
-            if (is_exit()) return;
-            _exclude_files.emplace(path);
-        }
-        void unexclude(std::string path) {
-            if (is_exit()) return;
-            _exclude_files.erase(path);
-        }
-        void remove(int fd) {
-            if (is_exit()) return;
-            _track_fd.erase(fd);
-        }
-        void remove(std::string path) {
-            if (is_exit()) return;
-            _track_files.erase(path);
-        }
-        bool is_traced(int fd) {
-            if (is_exit()) return false;
-            if (fd != -1 && !_track_fd.empty()) {
-                auto iter = _track_fd.find(fd);
-                if (iter != _track_fd.end()) {
-                    mimir::Logger::Instance("ATHENA")->log(mimir::LOG_INFO,
-                                                           "Tracking file descriptor %d", fd);
-                    return true;
-                }
-            }
-            return false;
-        }
-        bool is_traced(std::string path) {
-            if (is_exit()) return false;
-            if (!_track_files.empty()) {
-                auto iter = _track_files.find(path);
-                if (iter != _track_files.end()) {
-                    mimir::Logger::Instance("ATHENA")->log(mimir::LOG_INFO,
-                                                           "Tracking file %s", path.c_str());
-                    return true;
-                }
-            }
-            return false;
-        }
-        bool is_excluded(std::string path) {
-            if (is_exit()) return true;
-            if (!_exclude_files.empty()) {
-                auto iter = _exclude_files.find(path);
-                if (iter != _exclude_files.end()) {
-                    mimir::Logger::Instance("ATHENA")->log(mimir::LOG_INFO,
-                                                           "Excluding file %s", path.c_str());
-                    return true;
-                }
-            }
-            return false;
-        }
-    };
-}
-
-#define MIMIR_TRACKER mimir::Tracker::Instance()
 #include <cxxabi.h>
 #include <execinfo.h>
 #include <stdio.h>
 #include <stdlib.h>
 
 /** Print a demangled stack backtrace of the caller function to FILE* out. */
-static inline void print_stacktrace(FILE* out = stderr,
-                                    unsigned int max_frames = 63) {
+static inline void print_stacktrace(FILE* out = stderr, unsigned int max_frames = 63) {
   fprintf(out, "stack trace:\n");
 
   // storage array for stack trace address data
@@ -179,13 +94,101 @@ inline void handler_mimir(int sig) {
 
   // get void*'s for all entries on the stack
   size = backtrace(array, 10);
-  fprintf(stderr, "Error: signal %d:\n", sig);
+  fprintf(stderr, "Error: signal %d Waiting:\n", sig);
+  fflush(stdout);
+  getchar();
   print_stacktrace();
   exit(1);
 }
+extern bool is_mpi();
+extern void set_mpi();
+extern bool is_tracing();
+extern void init_mimir();
+extern void finalize_mimir();
+namespace mimir {
+    class Tracker {
+        std::unordered_set<int> _track_fd;
+        std::unordered_set<std::string> _track_files;
+        std::unordered_set<std::string> _exclude_files;
+    public:
+        ~Tracker() {
+            mimir::Logger::Instance("MIMIR")->log(mimir::LOG_INFO,
+                                                           "Destructing Tracker");
+        }
+        Tracker(): _track_fd(), _track_files(), _exclude_files() {
+            signal(SIGSEGV, handler_mimir);
+            signal(SIGABRT, handler_mimir);  // install our handler
+            mimir::Logger::Instance("MIMIR")->log(mimir::LOG_INFO,
+                                                           "Constructing Tracker");
+        }
+        void track(int fd) {
+            if (!is_tracing()) return;
+            _track_fd.emplace(fd);
+        }
+        void track(std::string path) {
+            if (!is_tracing()) return;
+            _track_files.emplace(path);
+        }
+
+        void exclude(std::string path) {
+            if (!is_tracing()) return;
+            _exclude_files.emplace(path);
+        }
+        void unexclude(std::string path) {
+            if (!is_tracing()) return;
+            _exclude_files.erase(path);
+        }
+        void remove(int fd) {
+            if (!is_tracing()) return;
+            _track_fd.erase(fd);
+        }
+        void remove(std::string path) {
+            if (!is_tracing()) return;
+            _track_files.erase(path);
+        }
+        bool is_traced(int fd) {
+            if (!is_tracing()) return false;
+            if (fd != -1 && !_track_fd.empty()) {
+                auto iter = _track_fd.find(fd);
+                if (iter != _track_fd.end()) {
+                    mimir::Logger::Instance("MIMIR")->log(mimir::LOG_INFO,
+                                                           "Tracking file descriptor %d", fd);
+                    return true;
+                }
+            }
+            return false;
+        }
+        bool is_traced(std::string path) {
+            if (!is_tracing()) return false;
+            if (!_track_files.empty()) {
+                auto iter = _track_files.find(path);
+                if (iter != _track_files.end()) {
+                    mimir::Logger::Instance("MIMIR")->log(mimir::LOG_INFO,
+                                                           "Tracking file %s", path.c_str());
+                    return true;
+                }
+            }
+            return false;
+        }
+        bool is_excluded(std::string path) {
+            if (!is_tracing()) return true;
+            if (!_exclude_files.empty()) {
+                auto iter = _exclude_files.find(path);
+                if (iter != _exclude_files.end()) {
+                    mimir::Logger::Instance("MIMIR")->log(mimir::LOG_INFO,
+                                                           "Excluding file %s", path.c_str());
+                    return true;
+                }
+            }
+            return false;
+        }
+    };
+}
+
+extern mimir::Tracker* MIMIR_TRACKER();
+
 inline mimir::JobConfigurationAdvice load_job_details() {
-  signal(SIGSEGV, handler_mimir);
-  signal(SIGABRT, handler_mimir);  // install our handler
+
   mimir::Logger::Instance("MIMIR")->log(mimir::LOG_INFO,
                                         "Loading job configuration");
   using namespace mimir;
@@ -196,11 +199,10 @@ inline mimir::JobConfigurationAdvice load_job_details() {
   job_conf_advice._devices.emplace_back(SHM, 1024);
   job_conf_advice._devices.emplace_back(PFS, 128);
   job_conf_advice._job_time_minutes = 30;
-  job_conf_advice._num_cores_per_node = 2;
+  job_conf_advice._num_cores_per_node = 40;
   job_conf_advice._num_gpus_per_node = 0;
-  job_conf_advice._num_nodes = 2;
+  job_conf_advice._num_nodes = 1;
   job_conf_advice._node_names.clear();
-  job_conf_advice._node_names.push_back("lassen168");
   job_conf_advice._node_names.push_back("lassen168");
   job_conf_advice._rpc_port = 8888;
   job_conf_advice._rpc_threads = 1;

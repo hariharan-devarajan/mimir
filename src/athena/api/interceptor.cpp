@@ -31,19 +31,16 @@ extern const char* kPathExclusions[22] = {"/bin/",
 extern const char* kExtensionExclusions[3] = {"conf", "out", "in"};
 
 
-
-void OnExit(void) { set_exit(); }
-
 bool IsTracked(std::string path, int fd) {
-  if (is_exit()) return false;
+  if (!is_tracing()) return false;
   if (path == "/" || path.find("socket:") == 0) {
     return false;
   }
-  auto is_excluded = MIMIR_TRACKER->is_excluded(path);
+  auto is_excluded = MIMIR_TRACKER()->is_excluded(path);
   if (is_excluded) return false;
-  auto is_traced = MIMIR_TRACKER->is_traced(path);
+  auto is_traced = MIMIR_TRACKER()->is_traced(path);
   if (is_traced) return true;
-  auto is_traced_fd = MIMIR_TRACKER->is_traced(fd);
+  auto is_traced_fd = MIMIR_TRACKER()->is_traced(fd);
   if (is_traced_fd) return true;
   return false;
 }

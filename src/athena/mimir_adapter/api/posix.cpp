@@ -95,8 +95,8 @@ int ATHENA_DECL(open64)(const char *path, int flags, ...) {
       uint16_t my_server_index = floor(
           current_rank / client->_job_configuration_advice._num_cores_per_node);
       uint16_t server_index = my_server_index;
-      auto mapped_file = client->_mapped_files.find(filename);
-      if (mapped_file == client->_mapped_files.end()) {
+      auto mapped_file = client->mapped_files_find(filename);
+      if (!mapped_file.first) {
         mimir::Logger::Instance("ATHENA")->log(
             mimir::LOG_INFO, "No Mapping found for file %s", path);
         if (file_advice_handler->is_advice_present(file_key)) {
@@ -152,7 +152,7 @@ int ATHENA_DECL(open64)(const char *path, int flags, ...) {
                         updated_devices;
                     client->_job_handler->save_advice(
                         job_conf_key, client->_job_configuration_advice);
-                    client->_mapped_files.emplace(std::string(path), filename);
+                    client->mapped_files_emplace(std::string(path), filename);
                   }
                 }
                 break;
@@ -222,7 +222,7 @@ int ATHENA_DECL(open64)(const char *path, int flags, ...) {
                           updated_devices;
                       client->_job_handler->save_advice(
                           job_conf_key, client->_job_configuration_advice);
-                      client->_mapped_files.emplace(std::string(path),
+                      client->mapped_files_emplace(std::string(path),
                                                     filename);
                     }
                   }
@@ -324,14 +324,21 @@ int ATHENA_DECL(open64)(const char *path, int flags, ...) {
           if (flags & O_DIRECT) {
             flags ^= O_DIRECT;
           }
+
+          if (flags & O_SYNC) {
+            flags ^= O_SYNC;
+          }
         }
       } else {
         mimir::Logger::Instance("ATHENA")->log(
             mimir::LOG_INFO, "Mapping %s found for file %s",
-            mapped_file->second.c_str(), path);
-        filename = mapped_file->second;
+            mapped_file.second.c_str(), path);
+        filename = mapped_file.second;
         if (flags & O_DIRECT) {
           flags ^= O_DIRECT;
+        }
+        if (flags & O_SYNC) {
+          flags ^= O_SYNC;
         }
       }
       if (perform_io) {
@@ -342,14 +349,10 @@ int ATHENA_DECL(open64)(const char *path, int flags, ...) {
         if (ret == -1) {
           mimir::Logger::Instance("ATHENA")->log(mimir::LOG_ERROR,
                                                  "Error %s opening file: %s",
-                                                 strerror(errno), path);
+                                                 strerror(errno), filename.c_str());
         }
       }
-      auto iter = client->_id_server_map.find(ret);
-      if (iter != client->_id_server_map.end()) {
-        client->_id_server_map.erase(ret);
-      }
-      client->_id_server_map.emplace(ret, server_index);
+      client->id_server_map_emplace(ret, server_index);
     } else {
       if (perform_io) {
         mimir::Logger::Instance("ATHENA")->log(mimir::LOG_WARN,
@@ -358,7 +361,7 @@ int ATHENA_DECL(open64)(const char *path, int flags, ...) {
         if (ret == -1) {
           mimir::Logger::Instance("ATHENA")->log(mimir::LOG_ERROR,
                                                  "Error %s opening file: %s",
-                                                 strerror(errno), path);
+                                                 strerror(errno), filename.c_str());
         }
       }
     }
@@ -367,7 +370,7 @@ int ATHENA_DECL(open64)(const char *path, int flags, ...) {
       ret = real_open64_(filename.c_str(), flags, mode);
     }
   }
-  if (!perform_io || strcmp(filename.c_str(), path) != 0) MIMIR_TRACKER->track(ret);
+  if (!perform_io || strcmp(filename.c_str(), path) != 0) MIMIR_TRACKER()->track(ret);
   return ret;
 }
 
@@ -391,9 +394,9 @@ ssize_t ATHENA_DECL(read)(int fd, void *buf, size_t count) {
     is_tracked = true;
     auto client = athena::PosixClient::Instance();
     if (client != nullptr) {
-      auto iter = client->_id_server_map.find(fd);
-      if (iter != client->_id_server_map.end()) {
-        auto file_server_index = iter->second;
+      auto iter = client->id_server_map_find(fd);
+      if (iter.first) {
+        auto file_server_index = iter.second;
         int current_rank = 0;
         if (is_mpi()) MPI_Comm_rank(MPI_COMM_WORLD, &current_rank);
         uint16_t my_server_index =
@@ -442,9 +445,9 @@ ssize_t ATHENA_DECL(write)(int fd, const void *buf, size_t count) {
     is_tracked = true;
     auto client = athena::PosixClient::Instance();
     if (client != nullptr) {
-      auto iter = client->_id_server_map.find(fd);
-      if (iter != client->_id_server_map.end()) {
-        auto file_server_index = iter->second;
+      auto iter = client->id_server_map_find(fd);
+      if (iter.first) {
+        auto file_server_index = iter.second;
 
         my_server_index =
             floor(current_rank /
@@ -497,9 +500,9 @@ int ATHENA_DECL(close)(int fd) {
   if (IsTracked(fd)) {
     auto client = athena::PosixClient::Instance();
     if (client != nullptr) {
-      auto iter = client->_id_server_map.find(fd);
-      if (iter != client->_id_server_map.end()) {
-        auto file_server_index = iter->second;
+      auto iter = client->id_server_map_find(fd);
+      if (iter.first) {
+        auto file_server_index = iter.second;
         int current_rank = 0;
         if (is_mpi()) MPI_Comm_rank(MPI_COMM_WORLD, &current_rank);
         uint16_t my_server_index =
@@ -516,8 +519,8 @@ int ATHENA_DECL(close)(int fd) {
                     .as<int>();
           perform_io = false;
         }
-        client->_id_server_map.erase(fd);
-        MIMIR_TRACKER->remove(fd);
+        client->id_server_map_erase(fd);
+        MIMIR_TRACKER()->remove(fd);
       }
     }
   }
@@ -535,9 +538,9 @@ off64_t ATHENA_DECL(lseek64)(int fd, off64_t offset, int whence) {
   if (IsTracked(fd)) {
     auto client = athena::PosixClient::Instance();
     if (client != nullptr) {
-      auto iter = client->_id_server_map.find(fd);
-      if (iter != client->_id_server_map.end()) {
-        auto file_server_index = iter->second;
+      auto iter = client->id_server_map_find(fd);
+      if (iter.first) {
+        auto file_server_index = iter.second;
         int current_rank = 0;
         if (is_mpi()) MPI_Comm_rank(MPI_COMM_WORLD, &current_rank);
         uint16_t my_server_index =

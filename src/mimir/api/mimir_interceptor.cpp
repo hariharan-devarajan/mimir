@@ -6,14 +6,24 @@
 
 namespace mimir {
     bool is_mpi = false;
-    bool exit = false;
+    bool is_tracing = false;
+    mimir::Tracker* tracker_instance = nullptr;
 }
-
-
-std::shared_ptr<mimir::Tracker> mimir::Tracker::_instance = nullptr;
 
 extern bool is_mpi() { return mimir::is_mpi; }
 extern void set_mpi() { mimir::is_mpi = true; }
 
-extern bool is_exit() { return mimir::exit;}
-extern void set_exit() { mimir::exit = true; }
+extern bool is_tracing() { return mimir::is_tracing;}
+
+extern void init_mimir() {
+    mimir::is_tracing = true;
+    mimir::tracker_instance = new mimir::Tracker();
+}
+extern void finalize_mimir() {
+    mimir::is_tracing = false;
+    delete mimir::tracker_instance;
+}
+
+extern mimir::Tracker* MIMIR_TRACKER() {
+    return mimir::tracker_instance;
+}

@@ -22,7 +22,7 @@ struct Info {
 struct Arguments {
   size_t num_operations = 100;
   size_t request_size = 65536;
-  bool debug = true;
+  bool debug = false;
 };
 }  // namespace mimir::test
 
@@ -426,7 +426,7 @@ TEST_CASE("optimization",
                            std::to_string(producer_rank_file) + "_" +
                            std::to_string(num_producers) + ".dat";
 
-  int request_size = 64 * 1024;
+  int request_size = 4 * 1024;
 
   std::string cmd = "{ tr -dc '[:alnum:]' < /dev/urandom | head -c " +
                     std::to_string(request_size * args.num_operations) +
@@ -535,13 +535,13 @@ TEST_CASE("optimization",
    */
   {
     auto read_data = std::vector<char>(request_size, 'r');
-    int read_fd = open(read_file.c_str(), O_RDONLY | O_DIRECT);
+    int read_fd = open(read_file.c_str(), O_RDONLY | O_DIRECT | O_SYNC);
     REQUIRE(read_fd != -1);
     for (int i = 0; i < args.num_operations; ++i) {
       read_timer.resumeTime();
       ssize_t bytes_read = read(read_fd, read_data.data(), request_size);
       read_timer.pauseTime();
-      // REQUIRE(bytes_read == request_size);
+      REQUIRE(bytes_read == request_size);
     }
     int close_status = close(read_fd);
     REQUIRE(close_status == 0);
@@ -557,27 +557,27 @@ TEST_CASE("optimization",
   {
     {
       auto write_data = std::vector<char>(request_size, 'w');
-      int write_fd = open(write_ind_file.c_str(), O_WRONLY | O_CREAT | O_DIRECT,
+      int write_fd = open(write_ind_file.c_str(), O_WRONLY | O_CREAT | O_DIRECT | O_SYNC,
                           S_IRWXU | S_IRWXG | S_IRWXO);
       REQUIRE(write_fd != -1);
       for (int i = 0; i < args.num_operations; ++i) {
         independent_timer.resumeTime();
         ssize_t bytes_read = write(write_fd, write_data.data(), request_size);
         independent_timer.pauseTime();
-        // REQUIRE(bytes_read == request_size);
+        REQUIRE(bytes_read == request_size);
       }
       int close_status = close(write_fd);
       REQUIRE(close_status == 0);
     }
     {
       auto read_data = std::vector<char>(request_size, 'r');
-      int read_fd = open(write_ind_file.c_str(), O_RDONLY | O_DIRECT);
+      int read_fd = open(write_ind_file.c_str(), O_RDONLY |  O_DIRECT | O_SYNC);
       REQUIRE(read_fd != -1);
       for (int i = 0; i < args.num_operations; ++i) {
         independent_timer.resumeTime();
         ssize_t bytes_read = read(read_fd, read_data.data(), request_size);
         independent_timer.pauseTime();
-        // REQUIRE(bytes_read == request_size);
+        REQUIRE(bytes_read == request_size);
       }
       int close_status = close(read_fd);
       REQUIRE(close_status == 0);
@@ -595,14 +595,14 @@ TEST_CASE("optimization",
   {
     if (is_producer) {
       auto write_data = std::vector<char>(request_size, 'w');
-      int write_fd = open(write_shared_file.c_str(), O_WRONLY | O_CREAT | O_DIRECT,
+      int write_fd = open(write_shared_file.c_str(), O_WRONLY | O_CREAT |  O_DIRECT | O_SYNC,
                           S_IRWXU | S_IRWXG | S_IRWXO);
       REQUIRE(write_fd != -1);
       for (int i = 0; i < args.num_operations; ++i) {
         shared_timer.resumeTime();
         ssize_t bytes_read = write(write_fd, write_data.data(), request_size);
         shared_timer.pauseTime();
-        // REQUIRE(bytes_read == request_size);
+        REQUIRE(bytes_read == request_size);
       }
       int close_status = close(write_fd);
       REQUIRE(close_status == 0);
@@ -610,13 +610,13 @@ TEST_CASE("optimization",
     MPI_Barrier(MPI_COMM_WORLD);
     if (!is_producer) {
       auto read_data = std::vector<char>(request_size, 'r');
-      int read_fd = open(write_shared_file.c_str(), O_RDONLY);
+      int read_fd = open(write_shared_file.c_str(), O_RDONLY | O_DIRECT | O_SYNC);
       REQUIRE(read_fd != -1);
       for (int i = 0; i < args.num_operations; ++i) {
         shared_timer.resumeTime();
         ssize_t bytes_read = read(read_fd, read_data.data(), request_size);
         shared_timer.pauseTime();
-        //      REQUIRE(bytes_read == request_size);
+        REQUIRE(bytes_read == request_size);
       }
       int close_status = close(read_fd);
       REQUIRE(close_status == 0);
@@ -647,12 +647,12 @@ TEST_CASE("optimization",
 
   MPI_Barrier(MPI_COMM_WORLD);
   if (info.rank == 0) {
+      ////"Timing,iter,procs,preload,read,independent,shared\n"
     fprintf(stdout,
-            "Timing:\n"
-            "preload,read,independent,shared\n"
-            "%f,%f,%f,%f\n",
+            "Timing,%d,%d,%f,%f,%f,%f\n",
+            args.num_operations, info.comm_size,
             total_preload / info.comm_size, total_read / info.comm_size,
-            total_independent / info.comm_size, shared_time / info.comm_size);
+            total_independent / info.comm_size, total_shared * 2 / info.comm_size);
   }
   std::string cmd_str =
       "rm -rf " + std::string(PFS) + "/* " + std::string(SHM) + "/* ";

@@ -14,8 +14,6 @@
 #include "mimir/api/job_configuration.h"
 #ifdef ATHENA_PRELOAD
 
-void OnExit(void);
-
 extern const char* kPathExclusions[22];
 extern const char* kExtensionExclusions[3];
 
@@ -55,6 +53,7 @@ inline std::string GetFilenameFromFD(int fd) {
 }
 bool IsTracked(std::string path, int fd = -1);
 inline bool IsTracked(int fd) {
+  if (!is_tracing()) return false;
   std::string file = GetFilenameFromFD(fd);
   return IsTracked(file, fd);
 }
