@@ -438,7 +438,7 @@ TEST_CASE("optimization",
   }
   MPI_Barrier(MPI_COMM_WORLD);
 
-  Timer preload_timer, independent_timer, shared_timer, read_timer;
+  Timer preload_timer, read_only_timer, write_i_timer, read_i_timer, write_s_timer, read_s_timer ;
 
   mimir::FileAdvice read_file_advice;
   read_file_advice._type._secondary =
@@ -538,9 +538,9 @@ TEST_CASE("optimization",
     int read_fd = open(read_file.c_str(), O_RDONLY | O_DIRECT | O_SYNC);
     REQUIRE(read_fd != -1);
     for (int i = 0; i < args.num_operations; ++i) {
-      read_timer.resumeTime();
+      read_only_timer.resumeTime();
       ssize_t bytes_read = read(read_fd, read_data.data(), request_size);
-      read_timer.pauseTime();
+      read_only_timer.pauseTime();
       REQUIRE(bytes_read == request_size);
     }
     int close_status = close(read_fd);
@@ -561,9 +561,9 @@ TEST_CASE("optimization",
                           S_IRWXU | S_IRWXG | S_IRWXO);
       REQUIRE(write_fd != -1);
       for (int i = 0; i < args.num_operations; ++i) {
-        independent_timer.resumeTime();
+        write_i_timer.resumeTime();
         ssize_t bytes_read = write(write_fd, write_data.data(), request_size);
-        independent_timer.pauseTime();
+        write_i_timer.pauseTime();
         REQUIRE(bytes_read == request_size);
       }
       int close_status = close(write_fd);
@@ -574,9 +574,9 @@ TEST_CASE("optimization",
       int read_fd = open(write_ind_file.c_str(), O_RDONLY |  O_DIRECT | O_SYNC);
       REQUIRE(read_fd != -1);
       for (int i = 0; i < args.num_operations; ++i) {
-        independent_timer.resumeTime();
+        read_i_timer.resumeTime();
         ssize_t bytes_read = read(read_fd, read_data.data(), request_size);
-        independent_timer.pauseTime();
+        read_i_timer.pauseTime();
         REQUIRE(bytes_read == request_size);
       }
       int close_status = close(read_fd);
@@ -599,9 +599,9 @@ TEST_CASE("optimization",
                           S_IRWXU | S_IRWXG | S_IRWXO);
       REQUIRE(write_fd != -1);
       for (int i = 0; i < args.num_operations; ++i) {
-        shared_timer.resumeTime();
+        write_s_timer.resumeTime();
         ssize_t bytes_read = write(write_fd, write_data.data(), request_size);
-        shared_timer.pauseTime();
+        write_s_timer.pauseTime();
         REQUIRE(bytes_read == request_size);
       }
       int close_status = close(write_fd);
@@ -613,9 +613,9 @@ TEST_CASE("optimization",
       int read_fd = open(write_shared_file.c_str(), O_RDONLY | O_DIRECT | O_SYNC);
       REQUIRE(read_fd != -1);
       for (int i = 0; i < args.num_operations; ++i) {
-        shared_timer.resumeTime();
+        read_s_timer.resumeTime();
         ssize_t bytes_read = read(read_fd, read_data.data(), request_size);
-        shared_timer.pauseTime();
+        read_s_timer.pauseTime();
         REQUIRE(bytes_read == request_size);
       }
       int close_status = close(read_fd);
@@ -630,29 +630,37 @@ TEST_CASE("optimization",
         ->log(mimir::LOG_INFO, "Write Shared Done --------------------");
   MPI_Barrier(MPI_COMM_WORLD);
 
-  double total_preload = 0.0, total_independent = 0.0, total_shared = 0.0,
-         total_read = 0.0;
+  double total_preload = 0.0, total_read_only = 0.0,
+            total_write_i = 0.0, total_read_i = 0.0,
+            total_write_s = 0.0, total_read_s = 0.0;
   double preload_time = preload_timer.getElapsedTime(),
-         independent_time = independent_timer.getElapsedTime(),
-         shared_time = shared_timer.getElapsedTime(),
-         read_time = read_timer.getElapsedTime();
+         write_i_time = write_i_timer.getElapsedTime(),
+         read_i_time = read_i_timer.getElapsedTime(),
+         write_s_time = write_s_timer.getElapsedTime(),
+         read_s_time = read_s_timer.getElapsedTime(),
+         read_only_time = read_only_timer.getElapsedTime();
   MPI_Reduce(&preload_time, &total_preload, 1, MPI_DOUBLE, MPI_SUM, 0,
              MPI_COMM_WORLD);
-  MPI_Reduce(&independent_time, &total_independent, 1, MPI_DOUBLE, MPI_SUM, 0,
+  MPI_Reduce(&read_only_time, &total_read_only, 1, MPI_DOUBLE, MPI_SUM, 0,
              MPI_COMM_WORLD);
-  MPI_Reduce(&shared_time, &total_shared, 1, MPI_DOUBLE, MPI_SUM, 0,
+  MPI_Reduce(&write_i_time, &total_write_i, 1, MPI_DOUBLE, MPI_SUM, 0,
              MPI_COMM_WORLD);
-  MPI_Reduce(&read_time, &total_read, 1, MPI_DOUBLE, MPI_SUM, 0,
+  MPI_Reduce(&read_i_time, &total_read_i, 1, MPI_DOUBLE, MPI_SUM, 0,
+             MPI_COMM_WORLD);
+  MPI_Reduce(&write_s_time, &total_write_s, 1, MPI_DOUBLE, MPI_SUM, 0,
+             MPI_COMM_WORLD);
+  MPI_Reduce(&read_s_time, &total_read_s, 1, MPI_DOUBLE, MPI_SUM, 0,
              MPI_COMM_WORLD);
 
   MPI_Barrier(MPI_COMM_WORLD);
   if (info.rank == 0) {
-      ////"Timing,iter,procs,preload,read,independent,shared\n"
+      ////"Timing,iter,procs,preload,read_only,write_i,read_i,write_s,read_s\n"
     fprintf(stdout,
-            "Timing,%d,%d,%f,%f,%f,%f\n",
+            "Timing,%d,%d,%f,%f,%f,%f,%f,%f\n",
             args.num_operations, info.comm_size,
-            total_preload / info.comm_size, total_read / info.comm_size,
-            total_independent / info.comm_size, total_shared * 2 / info.comm_size);
+            total_preload / info.comm_size, total_read_only / info.comm_size,
+            total_write_i / info.comm_size, total_read_i / info.comm_size,
+            total_write_s * 2 / info.comm_size, total_read_s * 2 / info.comm_size);
   }
   std::string cmd_str =
       "rm -rf " + std::string(PFS) + "/* " + std::string(SHM) + "/* ";
