@@ -398,12 +398,16 @@ TEST_CASE("optimization",
   int my_rank, comm_size;
   MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
   MPI_Comm_size(MPI_COMM_WORLD, &comm_size);
-  auto PFS = std::getenv("PFS_PATH");
-  auto SHM = std::getenv("SHM_PATH");
+  auto PFS = std::string(std::getenv("PFS_PATH")) + "/" + std::to_string(comm_size);
+  auto SHM = std::string(std::getenv("SHM_PATH")) + "/" + std::to_string(comm_size);
 
   std::string cmd_clean =
       "rm -rf " + std::string(PFS) + "/* " + std::string(SHM) + "/* ";
   system(cmd_clean.c_str());
+
+    std::string cmd_mkdir =
+            "mkdir -p " + std::string(PFS) + " " + std::string(SHM) + " ";
+    system(cmd_mkdir.c_str());
   MPI_Barrier(MPI_COMM_WORLD);
   mimir::Logger::Instance("PEGASUS_TEST")
       ->log(mimir::LOG_INFO, "Cleaned PFS %s and SHM %s", PFS, SHM);
