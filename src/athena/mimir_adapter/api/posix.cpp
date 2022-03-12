@@ -448,12 +448,11 @@ ssize_t ATHENA_DECL(write)(int fd, const void *buf, size_t count) {
       auto iter = client->id_server_map_find(fd);
       if (iter.first) {
         auto file_server_index = iter.second;
-
         my_server_index =
             floor(current_rank /
                   client->_job_configuration_advice._num_cores_per_node);
         if (my_server_index != file_server_index) {
-          DATA buf_data = DATA((char *)buf, count);
+          DATA buf_data = DATA((char*)buf, (char*)buf+count);
           ret = client->_rpc
                     ->call<RPCLIB_MSGPACK::object_handle>(
                         file_server_index, "athena::posix::write", fd, buf_data,

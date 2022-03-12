@@ -82,6 +82,7 @@ off_t posix_lseek(int fd, off_t offset, int whence);
 ssize_t posix_write(int fd, DATA buf, size_t count);
 DATA posix_read(int fd, size_t count);
 bool posix_prefetch(DATA filename);
+
 }  // namespace athena
 
 #endif  // ATHENA_POSIX_IO_H

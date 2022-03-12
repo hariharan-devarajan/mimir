@@ -45,6 +45,8 @@ athena::Server::Server(bool is_mpi) : is_server(false) {
   else
     current_rank = 0;
   if (current_rank % _job_configuration_advice._num_cores_per_node == 0) {
+    mimir::Logger::Instance("ATHENA")->log(mimir::LOG_WARN,
+                                            "current_rank %d, _num_cores_per_node %d", current_rank, _job_configuration_advice._num_cores_per_node);
     // node server rank
     uint16_t my_server_index =
         floor(current_rank / _job_configuration_advice._num_cores_per_node);
@@ -63,7 +65,7 @@ athena::Server::Server(bool is_mpi) : is_server(false) {
         _job_configuration_advice._rpc_port);
     bind_posix_calls();
     mimir::Logger::Instance("ATHENA")->log(
-        mimir::LOG_INFO, "Started the rpc server on rank %d", current_rank);
+        mimir::LOG_WARN, "Started the rpc server %s on rank %d with index %d", _job_configuration_advice._node_names[my_server_index].c_str(), current_rank, my_server_index);
   }
 }
 bool athena::Server::bind_posix_calls() {

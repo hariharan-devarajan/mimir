@@ -10,6 +10,7 @@
 
 #include <memory>
 #include <mutex>
+#include <shared_mutex>
 
 #include "mimir/advice/advice_handler.h"
 #include "mimir/advice/job_configuration_advice.h"
@@ -68,7 +69,7 @@ class Client {
   }
   std::unordered_map<std::string, std::string> _mapped_files;
   std::unordered_map<INTERFACE_IDENTIFIER, uint16_t> _id_server_map;
-  std::mutex _mapped_files_mutex, _id_server_map_mutex;
+  std::shared_mutex _mapped_files_mutex, _id_server_map_mutex;
  public:
   mimir::JobConfigurationAdvice _job_configuration_advice;
   std::shared_ptr<mimir::AdviceHandler<mimir::JobConfigurationAdvice>>
@@ -76,7 +77,7 @@ class Client {
   std::shared_ptr<RPC> _rpc;
 
   std::pair<bool, uint16_t> id_server_map_find(INTERFACE_IDENTIFIER id) {
-    std::lock_guard<std::mutex> guard(_id_server_map_mutex);
+    std::shared_lock guard(_id_server_map_mutex);
     auto ret = std::pair<bool, uint16_t>();
     ret.first = false;
     auto iter = _id_server_map.find(id);
@@ -87,7 +88,7 @@ class Client {
     return ret;
   }
   bool id_server_map_emplace(INTERFACE_IDENTIFIER id, uint16_t server_index) {
-    std::lock_guard<std::mutex> guard(_id_server_map_mutex);
+    std::unique_lock guard(_id_server_map_mutex);
       auto iter = _id_server_map.find(id);
       if (iter != _id_server_map.end()) {
           _id_server_map.erase(id);
@@ -96,13 +97,13 @@ class Client {
       return true;
   }
   bool id_server_map_erase(INTERFACE_IDENTIFIER id) {
-    std::lock_guard<std::mutex> guard(_id_server_map_mutex);
+    std::unique_lock guard(_id_server_map_mutex);
       _id_server_map.erase(id);
       return true;
   }
 
   std::pair<bool, std::string> mapped_files_find(std::string file_key) {
-    std::lock_guard<std::mutex> guard(_mapped_files_mutex);
+    std::shared_lock guard(_mapped_files_mutex);
     auto ret = std::pair<bool, std::string>();
     ret.first = false;
     auto iter = _mapped_files.find(file_key);
@@ -113,7 +114,7 @@ class Client {
     return ret;
   }
   bool mapped_files_emplace(std::string file_key, std::string file) {
-    std::lock_guard<std::mutex> guard(_mapped_files_mutex);
+    std::unique_lock guard(_mapped_files_mutex);
       auto iter = _mapped_files.find(file_key);
       if (iter != _mapped_files.end()) {
           _mapped_files.erase(file_key);
@@ -122,7 +123,7 @@ class Client {
       return true;
   }
   bool mapped_files_erase(std::string file_key) {
-    std::lock_guard<std::mutex> guard(_mapped_files_mutex);
+    std::unique_lock guard(_mapped_files_mutex);
       _mapped_files.erase(file_key);
       return true;
   }

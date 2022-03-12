@@ -15,6 +15,10 @@
 #include <execinfo.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <mutex>
+#include <experimental/filesystem>
+#include <fstream>
+namespace fs = std::experimental::filesystem;
 
 /** Print a demangled stack backtrace of the caller function to FILE* out. */
 static inline void print_stacktrace(FILE* out = stderr, unsigned int max_frames = 63) {
@@ -95,8 +99,6 @@ inline void handler_mimir(int sig) {
   // get void*'s for all entries on the stack
   size = backtrace(array, 10);
   fprintf(stderr, "Error: signal %d Waiting:\n", sig);
-  fflush(stdout);
-  getchar();
   print_stacktrace();
   exit(1);
 }
@@ -110,6 +112,9 @@ namespace mimir {
         std::unordered_set<int> _track_fd;
         std::unordered_set<std::string> _track_files;
         std::unordered_set<std::string> _exclude_files;
+        std::unordered_set<int> _remote_fd;
+        std::unordered_set<std::string> _remote_files;
+        std::mutex _track_fd_mutex, _track_files_mutex, _exclude_files_mutex;
     public:
         ~Tracker() {
             mimir::Logger::Instance("MIMIR")->log(mimir::LOG_INFO,
@@ -121,30 +126,78 @@ namespace mimir {
             mimir::Logger::Instance("MIMIR")->log(mimir::LOG_INFO,
                                                            "Constructing Tracker");
         }
+        void remote(int fd) {
+            if (!is_tracing()) return;
+            _remote_fd.emplace(fd);
+        }
+        void remote(std::string path) {
+            if (!is_tracing()) return;
+            _remote_files.emplace(path);
+        }
+        void remote_remove(int fd) {
+            if (!is_tracing()) return;
+            _remote_fd.erase(fd);
+        }
+        void remote_remove(std::string path) {
+            if (!is_tracing()) return;
+            _remote_files.erase(path);
+        }
+
         void track(int fd) {
             if (!is_tracing()) return;
+            //std::lock_guard<std::mutex> guard(_track_fd_mutex);
             _track_fd.emplace(fd);
         }
         void track(std::string path) {
             if (!is_tracing()) return;
+            //std::lock_guard<std::mutex> guard(_track_files_mutex);
             _track_files.emplace(path);
         }
 
         void exclude(std::string path) {
             if (!is_tracing()) return;
+            //std::lock_guard<std::mutex> guard(_exclude_files_mutex);
             _exclude_files.emplace(path);
         }
         void unexclude(std::string path) {
             if (!is_tracing()) return;
+            //std::lock_guard<std::mutex> guard(_exclude_files_mutex);
             _exclude_files.erase(path);
         }
         void remove(int fd) {
             if (!is_tracing()) return;
+            //std::lock_guard<std::mutex> guard(_track_fd_mutex);
             _track_fd.erase(fd);
         }
         void remove(std::string path) {
             if (!is_tracing()) return;
+            //std::lock_guard<std::mutex> guard(_track_files_mutex);
             _track_files.erase(path);
+        }
+        bool is_remote(int fd) {
+            if (!is_tracing()) return false;
+            if (fd != -1 && !_remote_fd.empty()) {
+                auto iter = _remote_fd.find(fd);
+                if (iter != _remote_fd.end()) {
+                    mimir::Logger::Instance("MIMIR")->log(mimir::LOG_INFO,
+                                                          "Remote file descriptor %d", fd);
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        bool is_remote(std::string filename) {
+            if (!is_tracing()) return false;
+            if (!_remote_files.empty()) {
+                auto iter = _remote_files.find(filename);
+                if (iter != _remote_files.end()) {
+                    mimir::Logger::Instance("MIMIR")->log(mimir::LOG_INFO,
+                                                          "Remote file descriptor %s", filename.c_str());
+                    return true;
+                }
+            }
+            return false;
         }
         bool is_traced(int fd) {
             if (!is_tracing()) return false;
@@ -187,26 +240,71 @@ namespace mimir {
 
 extern mimir::Tracker* MIMIR_TRACKER();
 
+inline std::vector<std::string> split_string(std::string x, char delim = ' '){
+    x += delim; //includes a delimiter at the end so last word is also read
+
+    auto set_splitted = std::unordered_set<std::string>();
+    std::string temp = "";
+    int count = 0;
+    auto splitted = std::vector<std::string>();
+    for (int i = 0; i < x.length(); i++) {
+        if (x[i] == delim) {
+            if (count > 0) {
+                auto iter = set_splitted.find(temp);
+                if (iter == set_splitted.end()) {
+                    set_splitted.emplace(temp);
+                    splitted.push_back(temp);
+                }
+            }
+            temp = "";
+            i++;
+            count ++;
+        }
+        temp += x[i];
+    }
+    return splitted;
+}
 inline mimir::JobConfigurationAdvice load_job_details() {
 
-  mimir::Logger::Instance("MIMIR")->log(mimir::LOG_INFO,
-                                        "Loading job configuration");
   using namespace mimir;
-  auto SHM = std::getenv("SHM_PATH");
-  auto PFS = std::getenv("PFS_PATH");
   mimir::JobConfigurationAdvice job_conf_advice;
-  job_conf_advice._job_id = 0;
-  job_conf_advice._devices.emplace_back(SHM, 1024);
-  job_conf_advice._devices.emplace_back(PFS, 128);
-  job_conf_advice._job_time_minutes = 30;
-  job_conf_advice._num_cores_per_node = 40;
-  job_conf_advice._num_gpus_per_node = 0;
-  job_conf_advice._num_nodes = 1;
-  job_conf_advice._node_names.clear();
-  job_conf_advice._node_names.push_back("lassen168");
-  job_conf_advice._rpc_port = 8888;
-  job_conf_advice._rpc_threads = 1;
-  job_conf_advice._priority = 100;
+  auto CONFIG = std::getenv("CONFIG_PATH");
+  if (CONFIG != nullptr && fs::exists(CONFIG)) {
+      std::ifstream input(CONFIG);
+      input.seekg(0, std::ios::end);
+      size_t size = input.tellg();
+      std::string buffer(size, ' ');
+      input.seekg(0);
+      input.read(&buffer[0], size);
+      input.close();
+      using json = nlohmann::json;
+      json read_json = json::parse(buffer);
+      read_json["job"].get_to(job_conf_advice);
+      mimir::Logger::Instance("MIMIR")->log(mimir::LOG_INFO,
+                                            "Loading job configuration from file %s", CONFIG);
+  } else {
+      auto SHM = std::getenv("SHM_PATH");
+      auto PFS = std::getenv("PFS_PATH");
+      auto LSB_HOSTS = std::getenv("LSB_HOSTS");
+      if (LSB_HOSTS == nullptr) {
+          LSB_HOSTS = "localhost";
+      }
+      auto node_names = split_string(LSB_HOSTS);
+
+      mimir::Logger::Instance("MIMIR")->log(mimir::LOG_INFO,
+                                            "Loading Default job configuration %s", node_names[0].c_str());
+      job_conf_advice._job_id = 0;
+      job_conf_advice._devices.emplace_back(SHM, 2 * 1024);
+      job_conf_advice._devices.emplace_back(PFS, 64 * 1024);
+      job_conf_advice._job_time_minutes = 30;
+      job_conf_advice._num_cores_per_node = 40;
+      job_conf_advice._num_gpus_per_node = 0;
+      job_conf_advice._num_nodes = node_names.size();
+      job_conf_advice._node_names = node_names;
+      job_conf_advice._rpc_port = 8888;
+      job_conf_advice._rpc_threads = 1;
+      job_conf_advice._priority = 100;
+  }
   return job_conf_advice;
 }
 

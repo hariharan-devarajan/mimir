@@ -36,6 +36,10 @@ bool IsTracked(std::string path, int fd) {
   if (path == "/" || path.find("socket:") == 0) {
     return false;
   }
+    auto is_remote = MIMIR_TRACKER()->is_remote(path);
+    if (is_remote) return false;
+    auto is_remote_fd = MIMIR_TRACKER()->is_remote(fd);
+    if (is_remote_fd) return false;
   auto is_excluded = MIMIR_TRACKER()->is_excluded(path);
   if (is_excluded) return false;
   auto is_traced = MIMIR_TRACKER()->is_traced(path);

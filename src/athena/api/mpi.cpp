@@ -29,11 +29,11 @@ int ATHENA_DECL(MPI_Init)(int *argc, char ***argv) {
 }
 
 int ATHENA_DECL(MPI_Finalize)(void) {
-  MPI_Barrier(MPI_COMM_WORLD);
+    MAP_OR_FAIL(MPI_Finalize);
+    int status = real_MPI_Finalize_();
   finalize_mimir();
   mimir::Logger::Instance("ATHENA")->log(mimir::LOG_INFO,
                                          "Intercepting MPI_Finalize");
-  MAP_OR_FAIL(MPI_Finalize);
-  int status = real_MPI_Finalize_();
+
   return status;
 }
