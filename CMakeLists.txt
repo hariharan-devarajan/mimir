@@ -77,7 +77,8 @@ include_directories(${Boost_INCLUDE_DIRS})
 include_directories(${CMAKE_PREFIX_PATH}/include)
 target_link_libraries(athena ${PROJECT_NAME} -lstdc++fs -ldl -fPIC -rdynamic rpclib::rpc ${MPI_CXX_LIBRARIES} hcl ${Boost_LIBRARIES})
 target_compile_definitions(athena PUBLIC ATHENA_PRELOAD)
-target_link_libraries(${PROJECT_NAME} -ldl ${MPI_CXX_LIBRARIES})
+find_package(Threads)
+target_link_libraries(${PROJECT_NAME} -ldl ${MPI_CXX_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
 set_target_properties(${PROJECT_NAME} PROPERTIES
         VERSION ${PROJECT_VERSION}
         SOVERSION 1

@@ -7,6 +7,7 @@
 #include <test_utils.h>
 
 #include <experimental/filesystem>
+#include <mimir/api/mimir_interceptor.h>
 
 #include "mimir/advice/advice_handler.h"
 #include "mimir/advice/advice_type.h"
@@ -410,7 +411,7 @@ TEST_CASE("optimization",
     system(cmd_mkdir.c_str());
   MPI_Barrier(MPI_COMM_WORLD);
   mimir::Logger::Instance("PEGASUS_TEST")
-      ->log(mimir::LOG_INFO, "Cleaned PFS %s and SHM %s", PFS, SHM);
+      ->log(mimir::LOG_INFO, "Cleaned PFS %s and SHM %s", PFS.c_str(), SHM.c_str());
 
   auto read_file = fs::path(PFS) / "test_read_" + std::to_string(my_rank) +
                    "_" + std::to_string(comm_size) + ".dat";
@@ -539,13 +540,13 @@ TEST_CASE("optimization",
    */
   {
     auto read_data = std::vector<char>(request_size, 'r');
-    int read_fd = open(read_file.c_str(), O_RDONLY | O_DIRECT | O_SYNC);
+    int read_fd = open(read_file.c_str(), O_RDONLY);
     REQUIRE(read_fd != -1);
     for (int i = 0; i < args.num_operations; ++i) {
       read_only_timer.resumeTime();
       ssize_t bytes_read = read(read_fd, read_data.data(), request_size);
       read_only_timer.pauseTime();
-      //REQUIRE(bytes_read == request_size);
+      REQUIRE(bytes_read == request_size);
     }
     int close_status = close(read_fd);
     REQUIRE(close_status == 0);
@@ -561,14 +562,14 @@ TEST_CASE("optimization",
   {
     {
       auto write_data = std::vector<char>(request_size, 'w');
-      int write_fd = open(write_ind_file.c_str(), O_WRONLY | O_CREAT | O_DIRECT | O_SYNC,
+      int write_fd = open(write_ind_file.c_str(), O_WRONLY | O_CREAT,
                           S_IRWXU | S_IRWXG | S_IRWXO);
       REQUIRE(write_fd != -1);
       for (int i = 0; i < args.num_operations; ++i) {
         write_i_timer.resumeTime();
         ssize_t bytes_read = write(write_fd, write_data.data(), request_size);
         write_i_timer.pauseTime();
-          //REQUIRE(bytes_read == request_size);
+        REQUIRE(bytes_read == request_size);
       }
       int close_status = close(write_fd);
       REQUIRE(close_status == 0);
@@ -581,7 +582,7 @@ TEST_CASE("optimization",
         read_i_timer.resumeTime();
         ssize_t bytes_read = read(read_fd, read_data.data(), request_size);
         read_i_timer.pauseTime();
-          // REQUIRE(bytes_read == request_size);
+        REQUIRE(bytes_read == request_size);
       }
       int close_status = close(read_fd);
       REQUIRE(close_status == 0);
@@ -606,7 +607,7 @@ TEST_CASE("optimization",
         write_s_timer.resumeTime();
         ssize_t bytes_read = write(write_fd, write_data.data(), request_size);
         write_s_timer.pauseTime();
-          //REQUIRE(bytes_read == request_size);
+        REQUIRE(bytes_read == request_size);
       }
       int close_status = close(write_fd);
       REQUIRE(close_status == 0);
@@ -614,13 +615,13 @@ TEST_CASE("optimization",
     MPI_Barrier(MPI_COMM_WORLD);
     if (!is_producer) {
       auto read_data = std::vector<char>(request_size, 'r');
-      int read_fd = open(write_shared_file.c_str(), O_RDONLY | O_DIRECT | O_SYNC);
+      int read_fd = open(write_shared_file.c_str(), O_RDONLY);
       REQUIRE(read_fd != -1);
       for (int i = 0; i < args.num_operations; ++i) {
         read_s_timer.resumeTime();
         ssize_t bytes_read = read(read_fd, read_data.data(), request_size);
         read_s_timer.pauseTime();
-          //REQUIRE(bytes_read == request_size);
+        REQUIRE(bytes_read == request_size);
       }
       int close_status = close(read_fd);
       REQUIRE(close_status == 0);
@@ -643,6 +644,20 @@ TEST_CASE("optimization",
          write_s_time = write_s_timer.getElapsedTime(),
          read_s_time = read_s_timer.getElapsedTime(),
          read_only_time = read_only_timer.getElapsedTime();
+    int local = 0, total_local = 0;
+    int remote = 0, total_remote = 0;
+  auto tracker = MIMIR_TRACKER();
+  if (tracker != nullptr) {
+      local = tracker->local.load();
+      remote = tracker->remote.load();
+  }
+
+    MPI_Reduce(&local, &total_local, 1, MPI_INT, MPI_SUM, 0,
+               MPI_COMM_WORLD);
+    MPI_Reduce(&remote, &total_remote, 1, MPI_INT, MPI_SUM, 0,
+               MPI_COMM_WORLD);
+
+
   MPI_Reduce(&preload_time, &total_preload, 1, MPI_DOUBLE, MPI_SUM, 0,
              MPI_COMM_WORLD);
   MPI_Reduce(&read_only_time, &total_read_only, 1, MPI_DOUBLE, MPI_SUM, 0,
@@ -658,12 +673,13 @@ TEST_CASE("optimization",
 
   MPI_Barrier(MPI_COMM_WORLD);
   if (info.rank == 0) {
-      ////"Timing,iter,procs,preload,read_only,write_i,read_i,write_s,read_s\n"
+      ////"Timing,iter,procs,preload,read_only,write_i,read_i,write_s,read_s,local,remote\n"
     fprintf(stdout,
-            "Timing,%d,%d,%f,%f,%f,%f,%f,%f\n",
+            "Timing,%d,%d,%f,%f,%f,%f,%f,%f, %d,%d\n",
             args.num_operations, info.comm_size,
             total_preload / info.comm_size, total_read_only / info.comm_size,
             total_write_i / info.comm_size, total_read_i / info.comm_size,
-            total_write_s * 2 / info.comm_size, total_read_s * 2 / info.comm_size);
+            total_write_s * 2 / info.comm_size, total_read_s * 2 / info.comm_size,
+            total_local, total_remote);
   }
 }

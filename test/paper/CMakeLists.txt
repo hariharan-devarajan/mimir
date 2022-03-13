@@ -1,7 +1,7 @@
 set(exec_prefix paper)
 
 set(PFS $ENV{pfs}/temp/mimir/pfs)
-set(SHM /dev/shm/haridev/mimir)
+set(SHM /var/tmp/mimir)
 
 
 set(example mimir_test)

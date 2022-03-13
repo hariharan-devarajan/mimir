@@ -12,6 +12,8 @@
 #include <mimir/typedef.h>
 
 #include <memory>
+#include <mutex>
+#include <shared_mutex>
 #include <set>
 #include <unordered_map>
 #include <unordered_set>
@@ -28,7 +30,7 @@ class AdviceHandler {
   std::unordered_map<MimirKey, AdviceMap> _advice;
 
   std::unordered_map<MimirKey, std::unordered_set<ADVICE>> _conflicts;
-
+  std::shared_mutex _advice_mutex;
  public:
   AdviceHandler() : _conflicts(), _advice() {}
 
@@ -44,6 +46,7 @@ class AdviceHandler {
   }
 
   std::set<ADVICE, std::greater<ADVICE>> resolve_conflicts(MimirKey &key) {
+    std::shared_lock guard(_advice_mutex);
     auto trace = mimir::AutoTrace("mimir::resolve_conflicts", key);
     auto added_handlers = std::set<ADVICE, std::greater<ADVICE>>();
     auto iter = _advice.find(key);
@@ -70,6 +73,7 @@ class AdviceHandler {
 
   MimirStatus save_advice(MimirKey &key, ADVICE advice) {
     auto trace = mimir::AutoTrace("mimir::save_advice", key, advice);
+    std::unique_lock guard(_advice_mutex);
     auto iter = _advice.find(key);
     AdviceMap val;
     if (iter == _advice.end()) {
@@ -86,6 +90,7 @@ class AdviceHandler {
 
   ADVICE remove_advice(MimirKey &key, size_t index) {
     auto trace = mimir::AutoTrace("mimir::remove_advice", key);
+    std::unique_lock guard(_advice_mutex);
     auto iter = _advice.find(key);
     if (iter != _advice.end()) {
       auto specific_advice_iter = iter->second.find(index);
@@ -102,11 +107,13 @@ class AdviceHandler {
 
   MimirStatus is_advice_present(MimirKey &key) {
     auto trace = mimir::AutoTrace("mimir::is_advice_present", key);
+    std::shared_lock guard(_advice_mutex);
     return _advice.find(key) != _advice.end();
   }
 
   std::pair<bool, AdviceMap> find_advice(MimirKey &key) {
     auto trace = mimir::AutoTrace("mimir::find_advice", key);
+    std::shared_lock guard(_advice_mutex);
     auto iter = _advice.find(key);
     if (iter == _advice.end()) {
       return std::make_pair(false, AdviceMap());

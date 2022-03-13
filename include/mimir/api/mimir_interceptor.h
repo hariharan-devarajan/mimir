@@ -16,6 +16,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <mutex>
+#include <shared_mutex>
 #include <experimental/filesystem>
 #include <fstream>
 namespace fs = std::experimental::filesystem;
@@ -99,8 +100,10 @@ inline void handler_mimir(int sig) {
   // get void*'s for all entries on the stack
   size = backtrace(array, 10);
   fprintf(stderr, "Error: signal %d Waiting:\n", sig);
+    fflush(stdout);
+  //  getchar();
   print_stacktrace();
-  exit(1);
+  exit(0);
 }
 extern bool is_mpi();
 extern void set_mpi();
@@ -112,95 +115,57 @@ namespace mimir {
         std::unordered_set<int> _track_fd;
         std::unordered_set<std::string> _track_files;
         std::unordered_set<std::string> _exclude_files;
-        std::unordered_set<int> _remote_fd;
-        std::unordered_set<std::string> _remote_files;
-        std::mutex _track_fd_mutex, _track_files_mutex, _exclude_files_mutex;
+        mutable std::shared_mutex mutex_exclude_files;
+
+
+        mutable std::shared_mutex mutex_tracked_files;
+        mutable std::shared_mutex mutex_tracked_fd;
     public:
+        std::atomic<int> local, remote;
         ~Tracker() {
             mimir::Logger::Instance("MIMIR")->log(mimir::LOG_INFO,
                                                            "Destructing Tracker");
         }
-        Tracker(): _track_fd(), _track_files(), _exclude_files() {
+        Tracker(): _track_fd(), _track_files(), _exclude_files(), local(0), remote(0){
             signal(SIGSEGV, handler_mimir);
             signal(SIGABRT, handler_mimir);  // install our handler
             mimir::Logger::Instance("MIMIR")->log(mimir::LOG_INFO,
                                                            "Constructing Tracker");
         }
-        void remote(int fd) {
-            if (!is_tracing()) return;
-            _remote_fd.emplace(fd);
-        }
-        void remote(std::string path) {
-            if (!is_tracing()) return;
-            _remote_files.emplace(path);
-        }
-        void remote_remove(int fd) {
-            if (!is_tracing()) return;
-            _remote_fd.erase(fd);
-        }
-        void remote_remove(std::string path) {
-            if (!is_tracing()) return;
-            _remote_files.erase(path);
-        }
-
         void track(int fd) {
             if (!is_tracing()) return;
-            //std::lock_guard<std::mutex> guard(_track_fd_mutex);
+            std::unique_lock lock(mutex_tracked_fd);
             _track_fd.emplace(fd);
         }
         void track(std::string path) {
             if (!is_tracing()) return;
-            //std::lock_guard<std::mutex> guard(_track_files_mutex);
+            std::unique_lock lock(mutex_tracked_files);
             _track_files.emplace(path);
         }
 
         void exclude(std::string path) {
             if (!is_tracing()) return;
-            //std::lock_guard<std::mutex> guard(_exclude_files_mutex);
+            std::unique_lock lock(mutex_exclude_files);
             _exclude_files.emplace(path);
         }
         void unexclude(std::string path) {
             if (!is_tracing()) return;
-            //std::lock_guard<std::mutex> guard(_exclude_files_mutex);
+            std::unique_lock lock(mutex_exclude_files);
             _exclude_files.erase(path);
         }
         void remove(int fd) {
             if (!is_tracing()) return;
-            //std::lock_guard<std::mutex> guard(_track_fd_mutex);
+            std::unique_lock lock(mutex_tracked_fd);
             _track_fd.erase(fd);
         }
         void remove(std::string path) {
             if (!is_tracing()) return;
-            //std::lock_guard<std::mutex> guard(_track_files_mutex);
+            std::unique_lock lock(mutex_tracked_files);
             _track_files.erase(path);
-        }
-        bool is_remote(int fd) {
-            if (!is_tracing()) return false;
-            if (fd != -1 && !_remote_fd.empty()) {
-                auto iter = _remote_fd.find(fd);
-                if (iter != _remote_fd.end()) {
-                    mimir::Logger::Instance("MIMIR")->log(mimir::LOG_INFO,
-                                                          "Remote file descriptor %d", fd);
-                    return true;
-                }
-            }
-            return false;
-        }
-
-        bool is_remote(std::string filename) {
-            if (!is_tracing()) return false;
-            if (!_remote_files.empty()) {
-                auto iter = _remote_files.find(filename);
-                if (iter != _remote_files.end()) {
-                    mimir::Logger::Instance("MIMIR")->log(mimir::LOG_INFO,
-                                                          "Remote file descriptor %s", filename.c_str());
-                    return true;
-                }
-            }
-            return false;
         }
         bool is_traced(int fd) {
             if (!is_tracing()) return false;
+            std::shared_lock lock(mutex_tracked_fd);
             if (fd != -1 && !_track_fd.empty()) {
                 auto iter = _track_fd.find(fd);
                 if (iter != _track_fd.end()) {
@@ -213,6 +178,7 @@ namespace mimir {
         }
         bool is_traced(std::string path) {
             if (!is_tracing()) return false;
+            std::shared_lock lock(mutex_tracked_files);
             if (!_track_files.empty()) {
                 auto iter = _track_files.find(path);
                 if (iter != _track_files.end()) {
@@ -225,6 +191,7 @@ namespace mimir {
         }
         bool is_excluded(std::string path) {
             if (!is_tracing()) return true;
+            std::shared_lock lock(mutex_exclude_files);
             if (!_exclude_files.empty()) {
                 auto iter = _exclude_files.find(path);
                 if (iter != _exclude_files.end()) {
@@ -302,7 +269,7 @@ inline mimir::JobConfigurationAdvice load_job_details() {
       job_conf_advice._num_nodes = node_names.size();
       job_conf_advice._node_names = node_names;
       job_conf_advice._rpc_port = 8888;
-      job_conf_advice._rpc_threads = 1;
+      job_conf_advice._rpc_threads = 8;
       job_conf_advice._priority = 100;
   }
   return job_conf_advice;

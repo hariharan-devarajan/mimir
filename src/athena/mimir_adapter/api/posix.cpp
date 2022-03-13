@@ -20,6 +20,7 @@
 #include "athena/server/posix_io.h"
 
 namespace fs = std::experimental::filesystem;
+
 MimirStatus file_prefetch(mimir::FileAdvice &advice) {
   if (advice._type._primary != mimir::PrimaryAdviceType::DATA_FILE) {
     return mimir::MIMIR_ONLY_FILE_ALLOWED;
@@ -62,12 +63,8 @@ MimirStatus file_prefetch(mimir::FileAdvice &advice) {
   }
 }
 
-int ATHENA_DECL(open64)(const char *path, int flags, ...) {
+int handle_open(const char *path, int flags, int mode, bool enable_rpc) {
   int ret;
-  va_list arg;
-  va_start(arg, flags);
-  int mode = va_arg(arg, int);
-  va_end(arg);
   MAP_OR_FAIL(open64);
   bool perform_io = true;
   std::string filename(path);
@@ -120,9 +117,9 @@ int ATHENA_DECL(open64)(const char *path, int flags, ...) {
                   mimir::Storage device;
                   for (int i = 0; i < num_devices; ++i) {
                     device = client->_job_configuration_advice._devices[i];
-                    if (!updated && ((int)device._capacity_mb -
-                                     (int)(device._used_capacity_mb +
-                                           advice._size_mb)) >= 0) {
+                    if (!updated && ((int) device._capacity_mb -
+                                     (int) (device._used_capacity_mb +
+                                            advice._size_mb)) >= 0) {
                       fs::create_directories(device._mount_point);
                       filename.replace(0,
                                        client->_job_configuration_advice
@@ -167,7 +164,7 @@ int ATHENA_DECL(open64)(const char *path, int flags, ...) {
                 server_index = std::hash<std::string>()(filename) %
                                client->_job_configuration_advice._num_nodes;
 
-                if (my_server_index != server_index) {
+                if (enable_rpc && my_server_index != server_index) {
                   mimir::Logger::Instance("ATHENA")->log(
                       mimir::LOG_INFO,
                       "Perform RPC on server %d open for file %s", server_index,
@@ -189,9 +186,9 @@ int ATHENA_DECL(open64)(const char *path, int flags, ...) {
                     mimir::Storage device;
                     for (int i = 0; i < num_devices; ++i) {
                       device = client->_job_configuration_advice._devices[i];
-                      if (!updated && ((int)device._capacity_mb -
-                                       (int)(device._used_capacity_mb +
-                                             advice._size_mb)) >= 0) {
+                      if (!updated && ((int) device._capacity_mb -
+                                       (int) (device._used_capacity_mb +
+                                              advice._size_mb)) >= 0) {
                         fs::create_directories(device._mount_point);
                         filename.replace(0,
                                          client->_job_configuration_advice
@@ -223,7 +220,7 @@ int ATHENA_DECL(open64)(const char *path, int flags, ...) {
                       client->_job_handler->save_advice(
                           job_conf_key, client->_job_configuration_advice);
                       client->mapped_files_emplace(std::string(path),
-                                                    filename);
+                                                   filename);
                     }
                   }
                 }
@@ -256,7 +253,7 @@ int ATHENA_DECL(open64)(const char *path, int flags, ...) {
                 server_index = std::hash<std::string>()(filename) %
                                client->_job_configuration_advice._num_nodes;
 
-                if (my_server_index != server_index) {
+                if (enable_rpc && my_server_index != server_index) {
                   mimir::Logger::Instance("ATHENA")->log(
                       mimir::LOG_INFO,
                       "Perform RPC on server %d open for file %s", server_index,
@@ -284,7 +281,7 @@ int ATHENA_DECL(open64)(const char *path, int flags, ...) {
                 /** perform user defined placement on files **/
                 server_index = std::hash<std::string>()(filename) %
                                client->_job_configuration_advice._num_nodes;
-                if (my_server_index != server_index) {
+                if (enable_rpc && my_server_index != server_index) {
                   mimir::Logger::Instance("ATHENA")->log(
                       mimir::LOG_INFO,
                       "Perform RPC on server %d open for file %s", server_index,
@@ -301,7 +298,7 @@ int ATHENA_DECL(open64)(const char *path, int flags, ...) {
                   mimir::Storage device;
                   if (advice._placement_device != advice._current_device) {
                     device = client->_job_configuration_advice
-                                 ._devices[advice._placement_device];
+                        ._devices[advice._placement_device];
                     filename.replace(0,
                                      client->_job_configuration_advice
                                          ._devices[advice._current_device]
@@ -374,23 +371,12 @@ int ATHENA_DECL(open64)(const char *path, int flags, ...) {
   return ret;
 }
 
-int ATHENA_DECL(open)(const char *path, int flags, ...) {
-  int ret;
-  va_list arg;
-  va_start(arg, flags);
-  int mode = va_arg(arg, int);
-  va_end(arg);
-  ret = open64(path, flags, mode);
-  fcntl(ret, F_SETFL, O_NONBLOCK);
-  return ret;
-}
-
-ssize_t ATHENA_DECL(read)(int fd, void *buf, size_t count) {
+ssize_t handle_read(int fd, void *buf, size_t count, bool enable_rpc) {
   ssize_t ret;
   /* TODO: add logic to read from remote*/
   bool perform_io = true;
   bool is_tracked = false;
-  if (IsTracked(fd)) {
+  if (enable_rpc && IsTracked(fd)) {
     is_tracked = true;
     auto client = athena::PosixClient::Instance();
     if (client != nullptr) {
@@ -420,27 +406,29 @@ ssize_t ATHENA_DECL(read)(int fd, void *buf, size_t count) {
   if (perform_io) {
     MAP_OR_FAIL(read);
     ret = real_read_(fd, buf, count);
-    if (is_tracked) {
+    if (is_tracked || !enable_rpc) {
       if (ret == -1) {
         mimir::Logger::Instance("ATHENA")->log(
-            mimir::LOG_ERROR, "Error %s Reading fd: %d", strerror(errno), fd);
+            mimir::LOG_WARN, "Error %s Reading fd: %d", strerror(errno), fd);
       } else if (ret != count) {
+        std::string str = GetFilenameFromFD(fd);
         mimir::Logger::Instance("ATHENA")->log(
-            mimir::LOG_ERROR, "Error %s Reading fd: %d written only %d of %d",
-            strerror(errno), fd, ret, count);
+            mimir::LOG_WARN, "Error %s Reading fd: %d file %s read only %d of %d",
+            strerror(errno), fd, str.c_str(), ret, count);
       }
     }
+
   }
   return ret;
 }
 
-ssize_t ATHENA_DECL(write)(int fd, const void *buf, size_t count) {
+ssize_t handle_write(int fd, const void *buf, size_t count, bool enable_rpc) {
   ssize_t ret;
   bool perform_io = true;
   bool is_tracked = false;
   int current_rank = 0;
   uint16_t my_server_index = 0;
-  if (IsTracked(fd)) {
+  if (IsTracked(fd) && enable_rpc) {
     if (is_mpi()) MPI_Comm_rank(MPI_COMM_WORLD, &current_rank);
     is_tracked = true;
     auto client = athena::PosixClient::Instance();
@@ -452,12 +440,12 @@ ssize_t ATHENA_DECL(write)(int fd, const void *buf, size_t count) {
             floor(current_rank /
                   client->_job_configuration_advice._num_cores_per_node);
         if (my_server_index != file_server_index) {
-          DATA buf_data = DATA((char*)buf, (char*)buf+count);
+          DATA buf_data = DATA((char *) buf, (char *) buf + count);
           ret = client->_rpc
-                    ->call<RPCLIB_MSGPACK::object_handle>(
-                        file_server_index, "athena::posix::write", fd, buf_data,
-                        count)
-                    .as<ssize_t>();
+              ->call<RPCLIB_MSGPACK::object_handle>(
+                  file_server_index, "athena::posix::write", fd, buf_data,
+                  count)
+              .as<ssize_t>();
           mimir::Logger::Instance("ATHENA")->log(
               mimir::LOG_INFO,
               "Perform RPC on server %d from rank %d with server_index %d "
@@ -470,33 +458,28 @@ ssize_t ATHENA_DECL(write)(int fd, const void *buf, size_t count) {
       }
     }
   }
+  std::string str = GetFilenameFromFD(fd);
   if (perform_io) {
     MAP_OR_FAIL(write);
     ret = real_write_(fd, buf, count);
-    if (is_tracked) {
+    if (is_tracked || !enable_rpc) {
       if (ret == -1) {
         mimir::Logger::Instance("ATHENA")->log(
-            mimir::LOG_ERROR, "Error %s Writing fd: %d", strerror(errno), fd);
+            mimir::LOG_WARN, "Error %s Writing fd: %d file %s ", strerror(errno), fd, str.c_str());
       } else if (ret != count) {
         mimir::Logger::Instance("ATHENA")->log(
-            mimir::LOG_ERROR, "Error %s Writing fd: %d written only %d of %d",
-            strerror(errno), fd, ret, count);
-      } else {
-        mimir::Logger::Instance("ATHENA")->log(
-            mimir::LOG_INFO,
-            "Perform Write on Local on rank %d with server_index %d for "
-            "file_descriptor %s and ret %d",
-            current_rank, my_server_index, GetFilenameFromFD(fd).c_str(), ret);
+            mimir::LOG_WARN, "Error %s Writing fd: %d file %s write only %d of %d",
+            strerror(errno), fd, str.c_str(), ret, count);
       }
     }
   }
   return ret;
 }
 
-int ATHENA_DECL(close)(int fd) {
+int handle_close(int fd, bool enable_rpc) {
   int ret;
   bool perform_io = true;
-  if (IsTracked(fd)) {
+  if (enable_rpc && IsTracked(fd)) {
     auto client = athena::PosixClient::Instance();
     if (client != nullptr) {
       auto iter = client->id_server_map_find(fd);
@@ -513,9 +496,9 @@ int ATHENA_DECL(close)(int fd) {
               "Perform RPC on server %d close for file_descriptor %d",
               file_server_index, fd);
           ret = client->_rpc
-                    ->call<RPCLIB_MSGPACK::object_handle>(
-                        file_server_index, "athena::posix::close", fd)
-                    .as<int>();
+              ->call<RPCLIB_MSGPACK::object_handle>(
+                  file_server_index, "athena::posix::close", fd)
+              .as<int>();
           perform_io = false;
         }
         client->id_server_map_erase(fd);
@@ -530,11 +513,11 @@ int ATHENA_DECL(close)(int fd) {
   return ret;
 }
 
-off64_t ATHENA_DECL(lseek64)(int fd, off64_t offset, int whence) {
+off64_t handle_lseek(int fd, off64_t offset, int whence, bool enable_rpc) {
   off64_t ret;
 
   bool perform_io = true;
-  if (IsTracked(fd)) {
+  if (enable_rpc && IsTracked(fd)) {
     auto client = athena::PosixClient::Instance();
     if (client != nullptr) {
       auto iter = client->id_server_map_find(fd);
@@ -547,10 +530,10 @@ off64_t ATHENA_DECL(lseek64)(int fd, off64_t offset, int whence) {
                   client->_job_configuration_advice._num_cores_per_node);
         if (my_server_index != file_server_index) {
           ret = client->_rpc
-                    ->call<RPCLIB_MSGPACK::object_handle>(
-                        file_server_index, "athena::posix::lseek", fd, offset,
-                        whence)
-                    .as<int>();
+              ->call<RPCLIB_MSGPACK::object_handle>(
+                  file_server_index, "athena::posix::lseek", fd, offset,
+                  whence)
+              .as<int>();
           mimir::Logger::Instance("ATHENA")->log(
               mimir::LOG_INFO,
               "Perform RPC on server %d close for file_descriptor %d and ret "
@@ -568,8 +551,59 @@ off64_t ATHENA_DECL(lseek64)(int fd, off64_t offset, int whence) {
   return ret;
 }
 
+int ATHENA_DECL(open64)(const char *path, int flags, ...) {
+  va_list arg;
+  va_start(arg, flags);
+  int mode = va_arg(arg, int);
+  va_end(arg);
+  auto tracer = MIMIR_TRACKER();
+  if (tracer != nullptr) tracer->local++;
+  return handle_open(path, flags, mode, true);
+}
+
+int ATHENA_DECL(open)(const char *path, int flags, ...) {
+  int ret;
+  va_list arg;
+  va_start(arg, flags);
+  int mode = va_arg(arg, int);
+  va_end(arg);
+
+  auto tracer = MIMIR_TRACKER();
+  if (tracer != nullptr) tracer->local++;
+  return handle_open(path, flags, mode, true);
+}
+
+ssize_t ATHENA_DECL(read)(int fd, void *buf, size_t count) {
+
+  auto tracer = MIMIR_TRACKER();
+  if (tracer != nullptr) tracer->local++;
+  return handle_read(fd, buf, count, true);
+}
+
+ssize_t ATHENA_DECL(write)(int fd, const void *buf, size_t count) {
+
+  auto tracer = MIMIR_TRACKER();
+  if (tracer != nullptr) tracer->local++;
+  return handle_write(fd, buf, count, true);
+}
+
+int ATHENA_DECL(close)(int fd) {
+
+  auto tracer = MIMIR_TRACKER();
+  if (tracer != nullptr) tracer->local++;
+  return handle_close(fd, true);
+}
+
+off64_t ATHENA_DECL(lseek64)(int fd, off64_t offset, int whence) {
+
+  auto tracer = MIMIR_TRACKER();
+  if (tracer != nullptr) tracer->local++;
+  return handle_lseek(fd, offset, whence, true);
+}
+
 off_t ATHENA_DECL(lseek)(int fd, off_t offset, int whence) {
-  off_t ret;
-  ret = lseek64(fd, offset, whence);
-  return ret;
+
+  auto tracer = MIMIR_TRACKER();
+  if (tracer != nullptr) tracer->local++;
+  return handle_lseek(fd, offset, whence, true);
 }

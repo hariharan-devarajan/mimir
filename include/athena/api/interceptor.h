@@ -14,33 +14,6 @@
 #include "mimir/api/job_configuration.h"
 #ifdef ATHENA_PRELOAD
 
-extern const char* kPathExclusions[22];
-extern const char* kExtensionExclusions[3];
-
-
-
-#define BT_BUF_SIZE 100
-inline void print_backtrace(void) {
-  int nptrs;
-  void* buffer[BT_BUF_SIZE];
-  char** strings;
-
-  nptrs = backtrace(buffer, BT_BUF_SIZE);
-  fprintf(stdout, "backtrace() returned %d addresses\n", nptrs);
-
-  /* The call backtrace_symbols_fd(buffer, nptrs, STDOUT_FILENO)
-     would produce similar output to the following: */
-
-  strings = backtrace_symbols(buffer, nptrs);
-  if (strings == NULL) {
-    perror("backtrace_symbols");
-    exit(EXIT_FAILURE);
-  }
-
-  for (int j = 0; j < nptrs; j++) fprintf(stdout, "%s\n", strings[j]);
-
-  free(strings);
-}
 
 inline std::string GetFilenameFromFD(int fd) {
   const int kMaxSize = 256;
@@ -54,8 +27,7 @@ inline std::string GetFilenameFromFD(int fd) {
 bool IsTracked(std::string path, int fd = -1);
 inline bool IsTracked(int fd) {
   if (!is_tracing()) return false;
-  std::string file = GetFilenameFromFD(fd);
-  return IsTracked(file, fd);
+  return IsTracked("", fd);
 }
 
 #include <dlfcn.h>
@@ -66,7 +38,7 @@ inline bool IsTracked(int fd) {
  */
 #define ATHENA_FORWARD_DECL(func_, ret_, args_) \
   typedef ret_(*real_t_##func_##_) args_;       \
-  ret_(*real_##func_##_) args_ = NULL;
+  static ret_(*real_##func_##_) args_ = NULL;
 
 #define ATHENA_DECL(func_) func_
 /**

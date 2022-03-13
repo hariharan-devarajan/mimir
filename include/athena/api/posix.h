@@ -20,5 +20,11 @@ ATHENA_FORWARD_DECL(read, ssize_t, (int fd, void *buf, size_t count));
 ATHENA_FORWARD_DECL(lseek, off_t, (int fd, off_t offset, int whence));
 ATHENA_FORWARD_DECL(lseek64, off64_t, (int fd, off64_t offset, int whence));
 
+int handle_open(const char *path, int flags, int mode, bool enable_rpc);
+ssize_t handle_read(int fd, void *buf, size_t count, bool enable_rpc);
+ssize_t handle_write(int fd, const void *buf, size_t count, bool enable_rpc);
+int handle_close(int fd, bool enable_rpc);
+off64_t handle_lseek(int fd, off64_t offset, int whence, bool enable_rpc);
+
 extern "C" MimirStatus file_prefetch(mimir::FileAdvice &payload);
 #endif  // ATHENA_POSIX_H
