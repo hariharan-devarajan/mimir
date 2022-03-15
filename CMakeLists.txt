@@ -54,11 +54,6 @@ add_subdirectory(external/hcl)
 include_directories(external/hcl/include)
 find_package(nlohmann_json 3.10.5 REQUIRED)
 
-#get_cmake_property(_variableNames VARIABLES)
-#list (SORT _variableNames)
-#foreach (_variableName ${_variableNames})
-#    message(STATUS "${_variableName}=${${_variableName}}")
-#endforeach()
 if(nlohmann_json_FOUND)
 message(STATUS "found nlohmann_json")
     target_link_libraries(${PROJECT_NAME} nlohmann_json::nlohmann_json)
@@ -78,7 +73,7 @@ include_directories(${CMAKE_PREFIX_PATH}/include)
 target_link_libraries(athena ${PROJECT_NAME} -lstdc++fs -ldl -fPIC -rdynamic rpclib::rpc ${MPI_CXX_LIBRARIES} hcl ${Boost_LIBRARIES})
 target_compile_definitions(athena PUBLIC ATHENA_PRELOAD)
 find_package(Threads)
-target_link_libraries(${PROJECT_NAME} -ldl ${MPI_CXX_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries(${PROJECT_NAME} -ldl ${MPI_CXX_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} -lunwind -lunwind-ppc64 -ldw)
 set_target_properties(${PROJECT_NAME} PROPERTIES
         VERSION ${PROJECT_VERSION}
         SOVERSION 1

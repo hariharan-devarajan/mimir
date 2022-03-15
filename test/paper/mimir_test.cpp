@@ -392,294 +392,316 @@ TEST_CASE("footprint",
   printf("%zu,%zu,%zu\n", app_advice_size, file_advice_size, job_advice_size);
 }
 
+TEST_CASE("hostfile",
+          "[test=hostfile]"
+          "[ranks_per_node=" +
+          std::to_string(args.num_operations) + "]") {
+  auto ranks_per_node = args.num_operations;
+  auto LSB_HOSTS = std::getenv("LSB_HOSTS");
+  if (LSB_HOSTS == nullptr) {
+    LSB_HOSTS = "localhost";
+  }
+  auto node_names = split_string(LSB_HOSTS);
+  auto num_nodes = node_names.size();
+  std::string filename = "hostfile_" + std::to_string(ranks_per_node) + "_" + std::to_string(num_nodes);
+  std::ofstream outfile (filename.c_str());
+  for(auto node_name:node_names) {
+    auto data = node_name+"  slots="+std::to_string(ranks_per_node)+"\n";
+    outfile.write(data.data(), data.size());
+  }
+  outfile.close();
+}
+
+
 TEST_CASE("optimization",
           "[test=optimization]"
           "[iteration=" +
               std::to_string(args.num_operations) + "]") {
-  int my_rank, comm_size;
-  MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
-  MPI_Comm_size(MPI_COMM_WORLD, &comm_size);
+  int my_rank=-1, comm_size, world_rank, world_size;
+  MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &world_size);
+  auto num_ranks_per_node = atoi(std::getenv("MPI_PROCS_PER_NODE"));
+  bool is_client = world_rank % num_ranks_per_node != 0;
+  MPI_Comm client_comm;
+  MPI_Comm_split(MPI_COMM_WORLD, is_client, world_rank, &client_comm);
+  int request_size = 4 * 1024;
+  MPI_Comm_size(client_comm, &comm_size);
+  if (!is_client) {
+    comm_size = world_size - comm_size;
+  }
   auto PFS = std::string(std::getenv("PFS_PATH")) + "/" + std::to_string(comm_size);
   auto SHM = std::string(std::getenv("SHM_PATH")) + "/" + std::to_string(comm_size);
-
-  std::string cmd_clean =
-      "rm -rf " + std::string(PFS) + "/* " + std::string(SHM) + "/* ";
-  system(cmd_clean.c_str());
-
-    std::string cmd_mkdir =
-            "mkdir -p " + std::string(PFS) + " " + std::string(SHM) + " ";
-    system(cmd_mkdir.c_str());
-  MPI_Barrier(MPI_COMM_WORLD);
-  mimir::Logger::Instance("PEGASUS_TEST")
-      ->log(mimir::LOG_INFO, "Cleaned PFS %s and SHM %s", PFS.c_str(), SHM.c_str());
-
-  auto read_file = fs::path(PFS) / "test_read_" + std::to_string(my_rank) +
-                   "_" + std::to_string(comm_size) + ".dat";
-
-  auto write_ind_file = fs::path(PFS) / "test_write_ind_" +
-                        std::to_string(my_rank) + "_" +
-                        std::to_string(comm_size) + ".dat";
-
+  auto read_file = fs::path(PFS) / "test_read_" + ".dat";
+  auto write_ind_file = fs::path(PFS) / "test_write_ind_" + ".dat";
+  auto write_shared_file = fs::path(PFS) / "test_write_shared_" + ".dat";
   int num_producers = comm_size / 2;
   if (num_producers == 0) num_producers = 1;
   bool is_producer = false;
-  if (my_rank < num_producers) {
-    is_producer = true;
-  }
-  int producer_rank_file = my_rank % num_producers;
-  auto write_shared_file = fs::path(PFS) / "test_write_shared_" +
-                           std::to_string(producer_rank_file) + "_" +
-                           std::to_string(num_producers) + ".dat";
+  if (is_client) {
+    MPI_Comm_rank(client_comm, &my_rank);
+    read_file = fs::path(PFS) / "test_read_" + std::to_string(my_rank) + "_" +
+                std::to_string(comm_size) + ".dat";
+    std::string cmd_clean =
+        "rm -rf " + std::string(PFS) + "/* " + std::string(SHM) + "/* ";
+    system(cmd_clean.c_str());
 
-  int request_size = 4 * 1024;
-
-  std::string cmd = "{ tr -dc '[:alnum:]' < /dev/urandom | head -c " +
-                    std::to_string(request_size * args.num_operations) +
-                    "; } > " + read_file.c_str() + " ";
-  int status = system(cmd.c_str());
-  if (fs::exists(read_file.c_str())) {
+    std::string cmd_mkdir =
+        "mkdir -p " + std::string(PFS) + " " + std::string(SHM) + " ";
+    system(cmd_mkdir.c_str());
+    MPI_Barrier(client_comm);
     mimir::Logger::Instance("PEGASUS_TEST")
-        ->log(mimir::LOG_INFO, "written file %s", read_file.c_str());
-  }
-  MPI_Barrier(MPI_COMM_WORLD);
-
-  Timer preload_timer, read_only_timer, write_i_timer, read_i_timer, write_s_timer, read_s_timer ;
-
-  mimir::FileAdvice read_file_advice;
-  read_file_advice._type._secondary =
-      mimir::OperationAdviceType::READ_ONLY_FILE;
-  read_file_advice._per_io_data =
-      args.num_operations / (args.num_operations + 2);
-  read_file_advice._per_io_metadata = 2 / (args.num_operations + 2);
-  read_file_advice._size_mb = 1024 * args.num_operations / MB;
-  read_file_advice._current_device = 1;
-  read_file_advice._write_distribution._64kb_1mb = 1.0;
-  read_file_advice._io_amount_mb = request_size * args.num_operations / MB;
-  read_file_advice._format = mimir::Format::FORMAT_BINARY;
-  read_file_advice._priority = 100;
-  read_file_advice._name = read_file.string();
-
-  mimir::FileAdvice write_file_ind_advice;
-  write_file_ind_advice._type._secondary =
-      mimir::OperationAdviceType::INDEPENDENT_FILE;
-  write_file_ind_advice._per_io_data =
-      args.num_operations / (args.num_operations + 2);
-  write_file_ind_advice._per_io_metadata = 2 / (args.num_operations + 2);
-  write_file_ind_advice._size_mb = 1024 * args.num_operations / MB;
-  write_file_ind_advice._current_device = 1;
-  write_file_ind_advice._write_distribution._64kb_1mb = 1.0;
-  write_file_ind_advice._io_amount_mb = request_size * args.num_operations / MB;
-  write_file_ind_advice._format = mimir::Format::FORMAT_BINARY;
-  write_file_ind_advice._priority = 100;
-  write_file_ind_advice._name = write_ind_file.string();
-
-  mimir::FileAdvice write_file_shared_advice;
-  write_file_shared_advice._type._secondary =
-      mimir::OperationAdviceType::SHARED_FILE;
-  write_file_shared_advice._per_io_data =
-      args.num_operations / (args.num_operations + 2);
-  write_file_shared_advice._per_io_metadata = 2 / (args.num_operations + 2);
-  write_file_shared_advice._size_mb = 1024 * args.num_operations / MB;
-  write_file_shared_advice._current_device = 1;
-  write_file_shared_advice._write_distribution._64kb_1mb = 1.0;
-  write_file_shared_advice._io_amount_mb =
-      request_size * args.num_operations / MB;
-  write_file_shared_advice._format = mimir::Format::FORMAT_BINARY;
-  write_file_shared_advice._priority = 100;
-  write_file_shared_advice._name = write_shared_file.string();
-
-  mimir::MimirHandler read_file_handler, write_ind_handler,
-      write_shared_handler;
-
-  for (int i = 0; i < comm_size; ++i) {
-    if (i != my_rank) {
-      auto read_file = fs::path(PFS) / "test_read_" + std::to_string(i) + "_" +
-                       std::to_string(comm_size) + ".dat";
-      read_file_advice._name = read_file.string();
-      mimir::file_advice_begin(read_file_advice, read_file_handler);
+        ->log(mimir::LOG_INFO, "Cleaned PFS %s and SHM %s", PFS.c_str(), SHM.c_str());
+    write_ind_file = fs::path(PFS) / "test_write_ind_" +
+                          std::to_string(my_rank) + "_" +
+                          std::to_string(comm_size) + ".dat";
+    if (my_rank < num_producers) {
+      is_producer = true;
     }
-  }
-
-  for (int i = 0; i < num_producers; ++i) {
-    auto write_shared_file = fs::path(PFS) / "test_write_shared_" +
-                             std::to_string(i) + "_" +
+    int producer_rank_file = my_rank % num_producers;
+    write_shared_file = fs::path(PFS) / "test_write_shared_" +
+                             std::to_string(producer_rank_file) + "_" +
                              std::to_string(num_producers) + ".dat";
+
+
+    std::string cmd = "{ tr -dc '[:alnum:]' < /dev/urandom | head -c " +
+                      std::to_string(request_size * args.num_operations) +
+                      "; } > " + read_file.c_str() + " ";
+    int status = system(cmd.c_str());
+    if (fs::exists(read_file.c_str())) {
+      mimir::Logger::Instance("PEGASUS_TEST")
+          ->log(mimir::LOG_INFO, "written file %s", read_file.c_str());
+    }
+  }
+  MPI_Barrier(MPI_COMM_WORLD);
+  Timer preload_timer, read_only_timer, write_i_timer, read_i_timer, write_s_timer, read_s_timer;
+
+    mimir::FileAdvice read_file_advice;
+    read_file_advice._type._secondary =
+        mimir::OperationAdviceType::READ_ONLY_FILE;
+    read_file_advice._per_io_data =
+        args.num_operations / (args.num_operations + 2);
+    read_file_advice._per_io_metadata = 2 / (args.num_operations + 2);
+    read_file_advice._size_mb = 1024 * args.num_operations / MB;
+    read_file_advice._current_device = 1;
+    read_file_advice._write_distribution._64kb_1mb = 1.0;
+    read_file_advice._io_amount_mb = request_size * args.num_operations / MB;
+    read_file_advice._format = mimir::Format::FORMAT_BINARY;
+    read_file_advice._priority = 100;
+
+    mimir::FileAdvice write_file_ind_advice;
+    write_file_ind_advice._type._secondary =
+        mimir::OperationAdviceType::INDEPENDENT_FILE;
+    write_file_ind_advice._per_io_data =
+        args.num_operations / (args.num_operations + 2);
+    write_file_ind_advice._per_io_metadata = 2 / (args.num_operations + 2);
+    write_file_ind_advice._size_mb = 1024 * args.num_operations / MB;
+    write_file_ind_advice._current_device = 1;
+    write_file_ind_advice._write_distribution._64kb_1mb = 1.0;
+    write_file_ind_advice._io_amount_mb = request_size * args.num_operations / MB;
+    write_file_ind_advice._format = mimir::Format::FORMAT_BINARY;
+    write_file_ind_advice._priority = 100;
+    write_file_ind_advice._name = write_ind_file.string();
+
+    mimir::FileAdvice write_file_shared_advice;
+    write_file_shared_advice._type._secondary =
+        mimir::OperationAdviceType::SHARED_FILE;
+    write_file_shared_advice._per_io_data =
+        args.num_operations / (args.num_operations + 2);
+    write_file_shared_advice._per_io_metadata = 2 / (args.num_operations + 2);
+    write_file_shared_advice._size_mb = 1024 * args.num_operations / MB;
+    write_file_shared_advice._current_device = 1;
+    write_file_shared_advice._write_distribution._64kb_1mb = 1.0;
+    write_file_shared_advice._io_amount_mb =
+        request_size * args.num_operations / MB;
+    write_file_shared_advice._format = mimir::Format::FORMAT_BINARY;
+    write_file_shared_advice._priority = 100;
+
+    mimir::MimirHandler read_file_handler, write_ind_handler,
+        write_shared_handler;
+
+    for (int i = 0; i < comm_size; ++i) {
+      if (i != my_rank) {
+        auto read_file = fs::path(PFS) / "test_read_" + std::to_string(i) + "_" +
+                         std::to_string(comm_size) + ".dat";
+        read_file_advice._name = read_file.string();
+        mimir::file_advice_begin(read_file_advice, read_file_handler);
+      }
+    }
+
+    for (int i = 0; i < num_producers; ++i) {
+      auto write_shared_file = fs::path(PFS) / "test_write_shared_" +
+                               std::to_string(i) + "_" +
+                               std::to_string(num_producers) + ".dat";
+      write_file_shared_advice._name = write_shared_file.string();
+      mimir::file_advice_begin(write_file_shared_advice, write_shared_handler);
+    }
+
+
+  MPI_Barrier(MPI_COMM_WORLD);
+  if (is_client) {
+    read_file_advice._name = read_file.string();
     write_file_shared_advice._name = write_shared_file.string();
-    mimir::file_advice_begin(write_file_shared_advice, write_shared_handler);
-  }
+    mimir::file_advice_begin(write_file_ind_advice, write_ind_handler);
+    MPI_Barrier(client_comm);
+    if (my_rank == 0)
+      mimir::Logger::Instance("PEGASUS_TEST")
+          ->log(mimir::LOG_ERROR, "--------------------");
+    MPI_Barrier(client_comm);
 
-  write_file_shared_advice._name = write_shared_file.string();
-  read_file_advice._name = read_file.string();
-
-  mimir::file_advice_begin(write_file_ind_advice, write_ind_handler);
-
-  mimir::file_advice_begin(write_file_ind_advice, write_ind_handler);
-
-  read_file_advice._name = read_file.string();
-
-  MPI_Barrier(MPI_COMM_WORLD);
-  if (my_rank == 0)
-    mimir::Logger::Instance("PEGASUS_TEST")
-        ->log(mimir::LOG_ERROR, "--------------------");
-  MPI_Barrier(MPI_COMM_WORLD);
-
-  /**
-   * Preload data
-   */
-  preload_timer.resumeTime();
-  read_file_advice._prefetch = true;
-  mimir::file_advice_begin(read_file_advice, read_file_handler);
-  preload_timer.pauseTime();
-  MPI_Barrier(MPI_COMM_WORLD);
-  if (my_rank == 0)
-    mimir::Logger::Instance("PEGASUS_TEST")
-        ->log(mimir::LOG_ERROR, "Prefetch Done --------------------");
-  MPI_Barrier(MPI_COMM_WORLD);
-  /**
-   * Read Only file data
-   */
-  {
-    auto read_data = std::vector<char>(request_size, 'r');
-    int read_fd = open(read_file.c_str(), O_RDONLY);
-    REQUIRE(read_fd != -1);
-    for (int i = 0; i < args.num_operations; ++i) {
-      read_only_timer.resumeTime();
-      ssize_t bytes_read = read(read_fd, read_data.data(), request_size);
-      read_only_timer.pauseTime();
-      REQUIRE(bytes_read == request_size);
-    }
-    int close_status = close(read_fd);
-    REQUIRE(close_status == 0);
-  }
-  MPI_Barrier(MPI_COMM_WORLD);
-  if (my_rank == 0)
-    mimir::Logger::Instance("PEGASUS_TEST")
-        ->log(mimir::LOG_ERROR, "Read Done --------------------");
-  MPI_Barrier(MPI_COMM_WORLD);
-  /**
-   * Write Individual
-   */
-  {
-    {
-      auto write_data = std::vector<char>(request_size, 'w');
-      int write_fd = open(write_ind_file.c_str(), O_WRONLY | O_CREAT,
-                          S_IRWXU | S_IRWXG | S_IRWXO);
-      REQUIRE(write_fd != -1);
-      for (int i = 0; i < args.num_operations; ++i) {
-        write_i_timer.resumeTime();
-        ssize_t bytes_read = write(write_fd, write_data.data(), request_size);
-        write_i_timer.pauseTime();
-        REQUIRE(bytes_read == request_size);
-      }
-      int close_status = close(write_fd);
-      REQUIRE(close_status == 0);
-    }
+    /**
+     * Preload data
+     */
+    preload_timer.resumeTime();
+    read_file_advice._prefetch = true;
+    mimir::file_advice_begin(read_file_advice, read_file_handler);
+    preload_timer.pauseTime();
+    MPI_Barrier(client_comm);
+    if (my_rank == 0)
+      mimir::Logger::Instance("PEGASUS_TEST")
+          ->log(mimir::LOG_ERROR, "Prefetch Done --------------------");
+    MPI_Barrier(client_comm);
+    /**
+     * Read Only file data
+     */
     {
       auto read_data = std::vector<char>(request_size, 'r');
-      int read_fd = open(write_ind_file.c_str(), O_RDONLY |  O_DIRECT | O_SYNC);
+      int read_fd = open(read_file.c_str(), O_RDONLY);
       REQUIRE(read_fd != -1);
       for (int i = 0; i < args.num_operations; ++i) {
-        read_i_timer.resumeTime();
+        read_only_timer.resumeTime();
         ssize_t bytes_read = read(read_fd, read_data.data(), request_size);
-        read_i_timer.pauseTime();
+        read_only_timer.pauseTime();
         REQUIRE(bytes_read == request_size);
       }
       int close_status = close(read_fd);
       REQUIRE(close_status == 0);
     }
-  }
-
-  MPI_Barrier(MPI_COMM_WORLD);
-  if (my_rank == 0)
-    mimir::Logger::Instance("PEGASUS_TEST")
-        ->log(mimir::LOG_ERROR, "Write Individual Done --------------------");
-  MPI_Barrier(MPI_COMM_WORLD);
-  /**
-   * Write Shared
-   */
-  {
-    if (is_producer) {
-      auto write_data = std::vector<char>(request_size, 'w');
-      int write_fd = open(write_shared_file.c_str(), O_WRONLY | O_CREAT |  O_DIRECT | O_SYNC,
-                          S_IRWXU | S_IRWXG | S_IRWXO);
-      REQUIRE(write_fd != -1);
-      for (int i = 0; i < args.num_operations; ++i) {
-        write_s_timer.resumeTime();
-        ssize_t bytes_read = write(write_fd, write_data.data(), request_size);
-        write_s_timer.pauseTime();
-        REQUIRE(bytes_read == request_size);
+    MPI_Barrier(client_comm);
+    if (my_rank == 0)
+      mimir::Logger::Instance("PEGASUS_TEST")
+          ->log(mimir::LOG_ERROR, "Read Done --------------------");
+    MPI_Barrier(client_comm);
+    /**
+     * Write Individual
+     */
+    {
+      {
+        auto write_data = std::vector<char>(request_size, 'w');
+        int write_fd = open(write_ind_file.c_str(), O_WRONLY | O_CREAT,
+                            S_IRWXU | S_IRWXG | S_IRWXO);
+        REQUIRE(write_fd != -1);
+        for (int i = 0; i < args.num_operations; ++i) {
+          write_i_timer.resumeTime();
+          ssize_t bytes_written = write(write_fd, write_data.data(), request_size);
+          write_i_timer.pauseTime();
+          REQUIRE(bytes_written == request_size);
+        }
+        int close_status = close(write_fd);
+        REQUIRE(close_status == 0);
       }
-      int close_status = close(write_fd);
-      REQUIRE(close_status == 0);
-    }
-    MPI_Barrier(MPI_COMM_WORLD);
-    if (!is_producer) {
-      auto read_data = std::vector<char>(request_size, 'r');
-      int read_fd = open(write_shared_file.c_str(), O_RDONLY);
-      REQUIRE(read_fd != -1);
-      for (int i = 0; i < args.num_operations; ++i) {
-        read_s_timer.resumeTime();
-        ssize_t bytes_read = read(read_fd, read_data.data(), request_size);
-        read_s_timer.pauseTime();
-        REQUIRE(bytes_read == request_size);
+      {
+        auto read_data = std::vector<char>(request_size, 'r');
+        int read_fd = open(write_ind_file.c_str(), O_RDONLY | O_DIRECT | O_SYNC);
+        REQUIRE(read_fd != -1);
+        for (int i = 0; i < args.num_operations; ++i) {
+          read_i_timer.resumeTime();
+          ssize_t bytes_read = read(read_fd, read_data.data(), request_size);
+          read_i_timer.pauseTime();
+          REQUIRE(bytes_read == request_size);
+        }
+        int close_status = close(read_fd);
+        REQUIRE(close_status == 0);
       }
-      int close_status = close(read_fd);
-      REQUIRE(close_status == 0);
     }
-    MPI_Barrier(MPI_COMM_WORLD);
+
+    MPI_Barrier(client_comm);
+    if (my_rank == 0)
+      mimir::Logger::Instance("PEGASUS_TEST")
+          ->log(mimir::LOG_ERROR, "Write Individual Done --------------------");
+    MPI_Barrier(client_comm);
+    /**
+     * Write Shared
+     */
+    {
+      if (is_producer) {
+        auto write_data = std::vector<char>(request_size, 'w');
+        int write_fd = open(write_shared_file.c_str(), O_WRONLY | O_CREAT | O_DIRECT | O_SYNC,
+                            S_IRWXU | S_IRWXG | S_IRWXO);
+        REQUIRE(write_fd != -1);
+        for (int i = 0; i < args.num_operations; ++i) {
+          write_s_timer.resumeTime();
+          ssize_t bytes_read = write(write_fd, write_data.data(), request_size);
+          write_s_timer.pauseTime();
+          REQUIRE(bytes_read == request_size);
+        }
+        int close_status = close(write_fd);
+        REQUIRE(close_status == 0);
+      }
+      MPI_Barrier(client_comm);
+      if (!is_producer) {
+        auto read_data = std::vector<char>(request_size, 'r');
+        int read_fd = open(write_shared_file.c_str(), O_RDONLY);
+        REQUIRE(read_fd != -1);
+        for (int i = 0; i < args.num_operations; ++i) {
+          read_s_timer.resumeTime();
+          ssize_t bytes_read = read(read_fd, read_data.data(), request_size);
+          read_s_timer.pauseTime();
+          REQUIRE(bytes_read == request_size);
+        }
+        int close_status = close(read_fd);
+        REQUIRE(close_status == 0);
+      }
+      MPI_Barrier(client_comm);
+    }
+
+    MPI_Barrier(client_comm);
+    if (my_rank == 0)
+      mimir::Logger::Instance("PEGASUS_TEST")
+          ->log(mimir::LOG_ERROR, "Write Shared Done --------------------");
+    MPI_Barrier(client_comm);
+    double total_preload = 0.0, total_read_only = 0.0,
+        total_write_i = 0.0, total_read_i = 0.0,
+        total_write_s = 0.0, total_read_s = 0.0;
+    double preload_time = preload_timer.getElapsedTime(),
+        write_i_time = write_i_timer.getElapsedTime(),
+        read_i_time = read_i_timer.getElapsedTime(),
+        write_s_time = write_s_timer.getElapsedTime(),
+        read_s_time = read_s_timer.getElapsedTime(),
+        read_only_time = read_only_timer.getElapsedTime();
+
+
+    MPI_Reduce(&preload_time, &total_preload, 1, MPI_DOUBLE, MPI_SUM, 0, client_comm);
+    MPI_Reduce(&read_only_time, &total_read_only, 1, MPI_DOUBLE, MPI_SUM, 0, client_comm);
+    MPI_Reduce(&write_i_time, &total_write_i, 1, MPI_DOUBLE, MPI_SUM, 0, client_comm);
+    MPI_Reduce(&read_i_time, &total_read_i, 1, MPI_DOUBLE, MPI_SUM, 0, client_comm);
+    MPI_Reduce(&write_s_time, &total_write_s, 1, MPI_DOUBLE, MPI_SUM, 0, client_comm);
+    MPI_Reduce(&read_s_time, &total_read_s, 1, MPI_DOUBLE, MPI_SUM, 0, client_comm);
+    if (my_rank == 0) {
+      ////"Timing,iter,procs,preload,read_only,write_i,read_i,write_s,read_s\n"
+      fprintf(stdout,
+              "Timing,%d,%d,%f,%f,%f,%f,%f,%f\n",
+              args.num_operations, comm_size,
+              total_preload / comm_size, total_read_only / comm_size,
+              total_write_i / comm_size, total_read_i / comm_size,
+              total_write_s * 2 / comm_size, total_read_s * 2 / comm_size);
+    }
   }
-
   MPI_Barrier(MPI_COMM_WORLD);
-  if (my_rank == 0)
-    mimir::Logger::Instance("PEGASUS_TEST")
-        ->log(mimir::LOG_ERROR, "Write Shared Done --------------------");
-  MPI_Barrier(MPI_COMM_WORLD);
-
-  double total_preload = 0.0, total_read_only = 0.0,
-            total_write_i = 0.0, total_read_i = 0.0,
-            total_write_s = 0.0, total_read_s = 0.0;
-  double preload_time = preload_timer.getElapsedTime(),
-         write_i_time = write_i_timer.getElapsedTime(),
-         read_i_time = read_i_timer.getElapsedTime(),
-         write_s_time = write_s_timer.getElapsedTime(),
-         read_s_time = read_s_timer.getElapsedTime(),
-         read_only_time = read_only_timer.getElapsedTime();
-    int local = 0, total_local = 0;
-    int remote = 0, total_remote = 0;
+  int local = 0, total_local = 0;
+  int remote = 0, total_remote = 0;
   auto tracker = MIMIR_TRACKER();
   if (tracker != nullptr) {
-      local = tracker->local.load();
-      remote = tracker->remote.load();
+    local = tracker->local.load();
+    remote = tracker->remote.load();
   }
 
-    MPI_Reduce(&local, &total_local, 1, MPI_INT, MPI_SUM, 0,
-               MPI_COMM_WORLD);
-    MPI_Reduce(&remote, &total_remote, 1, MPI_INT, MPI_SUM, 0,
-               MPI_COMM_WORLD);
+  MPI_Reduce(&local, &total_local, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
+  MPI_Reduce(&remote, &total_remote, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
 
-
-  MPI_Reduce(&preload_time, &total_preload, 1, MPI_DOUBLE, MPI_SUM, 0,
-             MPI_COMM_WORLD);
-  MPI_Reduce(&read_only_time, &total_read_only, 1, MPI_DOUBLE, MPI_SUM, 0,
-             MPI_COMM_WORLD);
-  MPI_Reduce(&write_i_time, &total_write_i, 1, MPI_DOUBLE, MPI_SUM, 0,
-             MPI_COMM_WORLD);
-  MPI_Reduce(&read_i_time, &total_read_i, 1, MPI_DOUBLE, MPI_SUM, 0,
-             MPI_COMM_WORLD);
-  MPI_Reduce(&write_s_time, &total_write_s, 1, MPI_DOUBLE, MPI_SUM, 0,
-             MPI_COMM_WORLD);
-  MPI_Reduce(&read_s_time, &total_read_s, 1, MPI_DOUBLE, MPI_SUM, 0,
-             MPI_COMM_WORLD);
-
-  MPI_Barrier(MPI_COMM_WORLD);
-  if (info.rank == 0) {
-      ////"Timing,iter,procs,preload,read_only,write_i,read_i,write_s,read_s,local,remote\n"
+  if (world_rank == 0) {
+    ////"Timing,local,remote\n"
     fprintf(stdout,
-            "Timing,%d,%d,%f,%f,%f,%f,%f,%f, %d,%d\n",
-            args.num_operations, info.comm_size,
-            total_preload / info.comm_size, total_read_only / info.comm_size,
-            total_write_i / info.comm_size, total_read_i / info.comm_size,
-            total_write_s * 2 / info.comm_size, total_read_s * 2 / info.comm_size,
+            "Timing,%d,%d\n",
             total_local, total_remote);
   }
 }

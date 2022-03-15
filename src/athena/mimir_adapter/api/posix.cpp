@@ -37,7 +37,7 @@ MimirStatus file_prefetch(mimir::FileAdvice &advice) {
       if (is_mpi()) MPI_Comm_rank(MPI_COMM_WORLD, &current_rank);
       my_server_index = floor(
           current_rank / client->_job_configuration_advice._num_cores_per_node);
-      auto dest_server = key._id % client->_job_configuration_advice._num_nodes;
+      auto dest_server = my_server_index;//key._id % client->_job_configuration_advice._num_nodes;
       bool status = false;
       if (my_server_index != dest_server) {
         mimir::Logger::Instance("ATHENA")->log(
@@ -365,6 +365,11 @@ int handle_open(const char *path, int flags, int mode, bool enable_rpc) {
   } else {
     if (perform_io) {
       ret = real_open64_(filename.c_str(), flags, mode);
+      if (!enable_rpc && ret == -1) {
+        mimir::Logger::Instance("ATHENA")->log(mimir::LOG_ERROR,
+                                               "Error %s opening file: %s",
+                                               strerror(errno), filename.c_str());
+      }
     }
   }
   if (!perform_io || strcmp(filename.c_str(), path) != 0) MIMIR_TRACKER()->track(ret);

@@ -1,0 +1,6 @@
+
+#!/bin/bash
+for node in 1 2 4 #8 16 32
+do
+bsub -J opt_$node -nnodes $node -W "2:00" -core_isolation 0 -G asccasc -q pbatch $PWD/run_optimization_script.sh
+done

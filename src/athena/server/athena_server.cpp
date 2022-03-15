@@ -45,11 +45,20 @@ athena::Server::Server(bool is_mpi) : is_server(false) {
   else
     current_rank = 0;
   if (current_rank % _job_configuration_advice._num_cores_per_node == 0) {
-    mimir::Logger::Instance("ATHENA")->log(mimir::LOG_WARN,
-                                            "current_rank %d, _num_cores_per_node %d", current_rank, _job_configuration_advice._num_cores_per_node);
     // node server rank
     uint16_t my_server_index =
         floor(current_rank / _job_configuration_advice._num_cores_per_node);
+    char hostname[HOST_NAME_MAX + 1];
+    gethostname(hostname, HOST_NAME_MAX + 1);
+    char* conf_hostname = _job_configuration_advice._node_names[my_server_index].data();
+    if(strcmp(conf_hostname,hostname) != 0) {
+      mimir::Logger::Instance("ATHENA")->log(
+          mimir::LOG_ERROR, "Mismatch hostname %s and conf %s for index %d", hostname, conf_hostname, my_server_index);
+    }
+    //assert();
+    mimir::Logger::Instance("ATHENA")->log(mimir::LOG_WARN,
+                                            "current_rank %d, _num_cores_per_node %d", current_rank, _job_configuration_advice._num_cores_per_node);
+
     is_server = true;
     HCL_CONF->IS_SERVER = is_server;
     HCL_CONF->MY_SERVER = my_server_index;
@@ -64,8 +73,10 @@ athena::Server::Server(bool is_mpi) : is_server(false) {
     _rpc = hcl::Singleton<RPCFactory>::GetInstance()->GetRPC(
         _job_configuration_advice._rpc_port);
     bind_posix_calls();
+
+    int pid = getpid();
     mimir::Logger::Instance("ATHENA")->log(
-        mimir::LOG_WARN, "Started the rpc server %s on rank %d with index %d", _job_configuration_advice._node_names[my_server_index].c_str(), current_rank, my_server_index);
+        mimir::LOG_WARN, "Started the rpc server %s on rank %d pid %d with index %d", _job_configuration_advice._node_names[my_server_index].c_str(), current_rank, pid, my_server_index);
   }
 }
 bool athena::Server::bind_posix_calls() {

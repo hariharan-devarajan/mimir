@@ -23,9 +23,7 @@ namespace mimir {
 template <typename ADVICE>
 class AdviceHandler {
  protected:
-  static std::unordered_map<PrimaryAdviceType,
-                            std::shared_ptr<AdviceHandler<ADVICE>>>
-      instance_map;
+  static std::shared_ptr<AdviceHandler<ADVICE>> _instance;
   typedef std::map<size_t, ADVICE, std::greater<size_t>> AdviceMap;
   std::unordered_map<MimirKey, AdviceMap> _advice;
 
@@ -35,14 +33,11 @@ class AdviceHandler {
   AdviceHandler() : _conflicts(), _advice() {}
 
   static std::shared_ptr<AdviceHandler<ADVICE>> Instance(AdviceType type) {
-    auto iter = instance_map.find(type._primary);
-    if (iter != instance_map.end()) {
-      return iter->second;
-    } else {
-      auto instance = std::make_shared<AdviceHandler<ADVICE>>();
-      instance_map.emplace(type._primary, instance);
-      return instance;
+    assert(type._primary == ADVICE()._type._primary);
+    if (_instance == nullptr) {
+      _instance = std::make_shared<AdviceHandler<ADVICE>>();
     }
+    return _instance;
   }
 
   std::set<ADVICE, std::greater<ADVICE>> resolve_conflicts(MimirKey &key) {
@@ -136,11 +131,9 @@ class AdviceHandler {
     return MIMIR_SUCCESS;
   }
 };
-template <typename ADVICE>
-std::unordered_map<mimir::PrimaryAdviceType,
-                   std::shared_ptr<mimir::AdviceHandler<ADVICE>>>
-    mimir::AdviceHandler<ADVICE>::instance_map = std::unordered_map<
-        PrimaryAdviceType, std::shared_ptr<AdviceHandler<ADVICE>>>();
+  template <typename ADVICE>
+  std::shared_ptr<AdviceHandler<ADVICE>> mimir::AdviceHandler<ADVICE>::_instance = nullptr;
+
 }  // namespace mimir
 
 #endif  // MIMIR_ADVICE_HANDLER_H

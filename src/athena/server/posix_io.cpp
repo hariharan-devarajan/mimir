@@ -19,7 +19,12 @@ namespace fs = std::experimental::filesystem;
 int athena::posix_open(DATA path, int flags, int mode) {
 
   MIMIR_TRACKER()->remote++;
-  int ret = handle_open(path.data(), flags, mode, false);
+  int ret = handle_open(path.data(), flags, mode, true);
+  if (ret == -1) {
+    mimir::Logger::Instance("ATHENA")->log(mimir::LOG_ERROR,
+                                           "Error %s remote opening file: %s",
+                                           strerror(errno), path.data());
+  }
   return ret;
 }
 int athena::posix_close(int fd) {
