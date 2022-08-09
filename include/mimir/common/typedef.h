@@ -7,6 +7,10 @@
 
 namespace mimir {
 typedef int ReturnType;
-typedef int Rank;
+typedef uint32_t Index;
+typedef Index RankIndex;
+typedef Index FileIndex;
+typedef Index ApplicationIndex;
+
 }  // namespace mimir
 #endif  // MIMIR_COMMON_TYPEDEF_H

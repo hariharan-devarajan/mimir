@@ -11,10 +11,10 @@
 #include <stdint-gcc.h>
 
 #include <memory>
+#include <nlohmann/json.hpp>
 #include <string>
 #include <utility>
 #include <vector>
-#include <nlohmann/json.hpp>
 
 #include "typedef.h"
 
@@ -48,7 +48,6 @@ struct Storage {
            _capacity_mb == other._capacity_mb;
   }
 };
-
 
 struct Node {
   uint32_t _unique_hash;
@@ -117,18 +116,33 @@ template <typename SOURCE, typename DESTINATION>
 struct Edge {
   SOURCE source;
   DESTINATION destination;
+  Edge() : source(), destination() {}
+  Edge(SOURCE _source, DESTINATION _destination)
+      : source(_source), destination(_destination) {}
+  Edge(const Edge<SOURCE, DESTINATION>& other)
+      : source(other.source), destination(other.destination) {}
+  Edge(const Edge<SOURCE, DESTINATION>&& other)
+      : source(other.source), destination(other.destination) {}
+  Edge& operator=(const Edge<SOURCE, DESTINATION>& other) {
+    source = other.source;
+    destination = other.destination;
+    return *this;
+  }
+  bool operator==(const Edge<SOURCE, DESTINATION>& other) const {
+    return source == other.source && destination == other.destination;
+  }
 };
 
 struct ApplicationFileDAG {
-  std::vector<Application> applications;
-  std::vector<File> files;
-  std::vector<Edge<Node, Node>> edges;
+  std::vector<ApplicationIndex> applications;
+  std::vector<FileIndex> files;
+  std::vector<Edge<ApplicationIndex, FileIndex>> edges;
 };
 
 struct RankFileDAG {
-  std::vector<Rank> ranks;
-  std::vector<File> files;
-  std::vector<Edge<Node, Node>> edges;
+  std::vector<RankIndex> ranks;
+  std::vector<FileIndex> files;
+  std::vector<Edge<RankIndex, FileIndex>> edges;
 };
 
 struct TransferSizeDistribution {
@@ -153,6 +167,26 @@ struct TransferSizeDistribution {
     return _0_4kb == other._0_4kb && _4_64kb == other._4_64kb &&
            _64kb_1mb == other._64kb_1mb && _1mb_16mb == other._1mb_16mb &&
            _16mb == other._16mb;
+  }
+  TransferSizeDistribution(const TransferSizeDistribution& other)
+      : _0_4kb(other._0_4kb),
+        _4_64kb(other._4_64kb),
+        _64kb_1mb(other._64kb_1mb),
+        _1mb_16mb(other._1mb_16mb),
+        _16mb(other._16mb) {}
+  TransferSizeDistribution(const TransferSizeDistribution&& other)
+      : _0_4kb(other._0_4kb),
+        _4_64kb(other._4_64kb),
+        _64kb_1mb(other._64kb_1mb),
+        _1mb_16mb(other._1mb_16mb),
+        _16mb(other._16mb) {}
+  TransferSizeDistribution& operator=(const TransferSizeDistribution& other) {
+    _0_4kb = other._0_4kb;
+    _4_64kb = other._4_64kb;
+    _64kb_1mb = other._64kb_1mb;
+    _1mb_16mb = other._1mb_16mb;
+    _16mb = other._16mb;
+    return *this;
   }
 };
 struct MimirKey {
@@ -220,18 +254,67 @@ inline std::ostream& operator<<(std::ostream& os, mimir::MimirKey const& m) {
 using json = nlohmann::json;
 
 namespace mimir {
-    inline void to_json(json& j, const mimir::Storage& p) {
-        j["mount_point"] = p._mount_point;
-        j["capacity_mb"] = p._capacity_mb;
-        j["used_capacity_mb"] = p._used_capacity_mb;
-    }
+inline void to_json(json& j, const mimir::Storage& p) {
+  j["mount_point"] = p._mount_point;
+  j["capacity_mb"] = p._capacity_mb;
+  j["used_capacity_mb"] = p._used_capacity_mb;
+}
 
-    inline void from_json(const json& j, mimir::Storage& p) {
-        j.at("mount_point").get_to(p._mount_point);
-        j.at("capacity_mb").get_to(p._capacity_mb);
-        j.at("used_capacity_mb").get_to(p._used_capacity_mb);
-    }
-} // namespace ns
+inline void from_json(const json& j, mimir::Storage& p) {
+  j.at("mount_point").get_to(p._mount_point);
+  j.at("capacity_mb").get_to(p._capacity_mb);
+  j.at("used_capacity_mb").get_to(p._used_capacity_mb);
+}
+inline void to_json(json& j, const TransferSizeDistribution& p) {
+  float a[5] = {p._0_4kb, p._4_64kb, p._64kb_1mb, p._1mb_16mb, p._1mb_16mb};
+  j = a;
+}
 
+inline void from_json(const json& j, TransferSizeDistribution& p) {
+  float a[5];
+  j.get_to(a);
+  p._0_4kb = a[0];
+  p._4_64kb = a[1];
+  p._64kb_1mb = a[2];
+  p._1mb_16mb = a[3];
+  p._1mb_16mb = a[4];
+}
+inline void to_json(json& j, const mimir::Edge<Index, Index>& p) {
+  uint32_t a[2] = {p.source, p.destination};
+  j = a;
+}
+
+inline void from_json(const json& j, mimir::Edge<Index, Index>& p) {
+  uint32_t a[2];
+  j.get_to(a);
+  p.source = a[0];
+  p.destination = a[1];
+}
+
+inline void to_json(json& j, const mimir::ApplicationFileDAG& p) {
+  j["applications"] = p.applications;
+  j["files"] = p.files;
+  j["edges"] = p.edges;
+}
+
+inline void from_json(const json& j, mimir::ApplicationFileDAG& p) {
+  j.at("applications").get_to(p.applications);
+  j.at("files").get_to(p.files);
+  j.at("edges").get_to(p.edges);
+}
+
+inline void to_json(json& j, const mimir::RankFileDAG& p) {
+  j["ranks"] = p.ranks;
+  j["files"] = p.files;
+  j["edges"] = p.edges;
+}
+
+inline void from_json(const json& j, mimir::RankFileDAG& p) {
+  j.at("ranks").get_to(p.ranks);
+  j.at("files").get_to(p.files);
+  j.at("edges").get_to(p.edges);
+}
+
+}  // namespace mimir
 
 #endif  // MIMIR_DATA_STRUCTURE_H
