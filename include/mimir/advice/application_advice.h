@@ -91,6 +91,8 @@ inline void from_json(const json& j, ApplicationAdvice& p) {
   j.at("interfaces_used").get_to(p._interfaces_used);
   j.at("file_access_pattern").get_to(p._file_access_pattern);
   j.at("runtime_minutes").get_to(p._runtime_minutes);
+  j.at("name").get_to(p._name);
+  j.at("rank_file_dag").get_to(p._rank_file_dag);
 }
 }  // namespace mimir
 #endif  // MIMIR_APPLICATION_ADVICE_H

@@ -97,4 +97,38 @@ struct hash<mimir::FileAdvice> {
   size_t operator()(const mimir::FileAdvice& k) const { return k._index; }
 };
 }  // namespace std
+
+using json = nlohmann::json;
+namespace mimir {
+inline void to_json(json& j, const FileAdvice& p) {
+  j = json();
+  to_json(j, (mimir::Advice&)p);
+  j["format"] = p._format;
+  j["size_mb"] = p._size_mb;
+  j["name"] = p._name;
+
+  j["read_distribution"] = p._read_distribution;
+  j["write_distribution"] = p._write_distribution;
+
+  j["per_io_data"] = p._per_io_data;
+  j["per_io_metadata"] = p._per_io_metadata;
+  j["current_device"] = p._current_device;
+  j["placement_device"] = p._placement_device;
+  j["prefetch"] = p._prefetch;
+}
+
+inline void from_json(const json& j, FileAdvice& p) {
+  from_json(j, (mimir::Advice&)p);
+  j.at("format").get_to(p._format);
+  j.at("size_mb").get_to(p._size_mb);
+  j.at("name").get_to(p._name);
+  j.at("read_distribution").get_to(p._read_distribution);
+  j.at("write_distribution").get_to(p._write_distribution);
+  j.at("per_io_data").get_to(p._per_io_data);
+  j.at("per_io_metadata").get_to(p._per_io_metadata);
+  j.at("current_device").get_to(p._current_device);
+  j.at("placement_device").get_to(p._placement_device);
+  j.at("prefetch").get_to(p._prefetch);
+}
+}  // namespace mimir
 #endif  // MIMIR_FILE_ADVICE_H
