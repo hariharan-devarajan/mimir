@@ -7,6 +7,8 @@ include(GNUInstallDirs)
 include_directories(src)
 include_directories(include)
 add_definitions(-w)
+option(ENABLE_ATHENA "Build Athena" OFF)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -rdynamic")
 set(MIMIR_LIBRARY_SRC include/mimir/mimir.h
         include/mimir/advice/advice.h
         include/mimir/advice/advice_type.h
@@ -40,40 +42,43 @@ set(MIMIR_LIBRARY_SRC include/mimir/mimir.h
         src/mimir/advice/advice_handler.h
         include/mimir/api/mimir_interceptor.h src/mimir/api/mimir_interceptor.cpp include/mimir/common/debug.h src/mimir/common/debug.cpp)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DHCL_ENABLE_RPCLIB")
-message("HCL_ENABLE_RPCLIB: ${HCL_ENABLE_RPCLIB}")
-
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -rdynamic")
 add_library(${PROJECT_NAME} SHARED ${MIMIR_LIBRARY_SRC})
+if(ENABLE_ATHENA)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DHCL_ENABLE_RPCLIB")
+    message("HCL_ENABLE_RPCLIB: ${HCL_ENABLE_RPCLIB}")
 
-set(ATHENA_LIBRARY_SRC src/athena/mimir_adapter/api/posix.cpp
-        include/athena/api/posix.h src/athena/api/mpi.cpp include/athena/api/mpi.h src/athena/server/athena_server.cpp src/athena/server/athena_server.h src/athena/client/athena_client.h src/athena/server/posix_io.cpp src/athena/server/posix_io.h src/athena/api/interceptor.cpp src/athena/mimir_adapter/api/stdio.cpp include/athena/api/stdio.h src/athena/client/posix_athena_client.cpp src/athena/client/posix_athena_client.h)
 
-add_library(athena SHARED ${ATHENA_LIBRARY_SRC})
-add_subdirectory(external/hcl)
-include_directories(external/hcl/include)
+    set(ATHENA_LIBRARY_SRC src/athena/mimir_adapter/api/posix.cpp
+            include/athena/api/posix.h src/athena/api/mpi.cpp include/athena/api/mpi.h src/athena/server/athena_server.cpp src/athena/server/athena_server.h src/athena/client/athena_client.h src/athena/server/posix_io.cpp src/athena/server/posix_io.h src/athena/api/interceptor.cpp src/athena/mimir_adapter/api/stdio.cpp include/athena/api/stdio.h src/athena/client/posix_athena_client.cpp src/athena/client/posix_athena_client.h)
+
+    add_library(athena SHARED ${ATHENA_LIBRARY_SRC})
+    add_subdirectory(external/hcl)
+    include_directories(external/hcl/include)
+endif()
 find_package(nlohmann_json 3.10.5 REQUIRED)
 
 if(nlohmann_json_FOUND)
-message(STATUS "found nlohmann_json")
+    message(STATUS "found nlohmann_json")
     target_link_libraries(${PROJECT_NAME} nlohmann_json::nlohmann_json)
 endif()
 find_package(MPI REQUIRED COMPONENTS CXX)
-find_package(rpclib REQUIRED)
-if (rpclib_FOUND)
-    message(STATUS "found rpclib ${rpclib_ROOT_DIR}")
-endif ()
-find_package(Boost 1.69 REQUIRED)
 if (MPI_FOUND)
     message(STATUS "found mpi.h at ${MPI_CXX_INCLUDE_DIRS}")
+    include_directories(${MPI_CXX_INCLUDE_DIRS})
 endif ()
-include_directories(${MPI_CXX_INCLUDE_DIRS})
-include_directories(${Boost_INCLUDE_DIRS})
-include_directories(${CMAKE_PREFIX_PATH}/include)
-target_link_libraries(athena ${PROJECT_NAME} -lstdc++fs -ldl -fPIC -rdynamic rpclib::rpc ${MPI_CXX_LIBRARIES} hcl ${Boost_LIBRARIES})
-target_compile_definitions(athena PUBLIC ATHENA_PRELOAD)
+if(ENABLE_ATHENA)
+    find_package(rpclib REQUIRED)
+    if (rpclib_FOUND)
+        message(STATUS "found rpclib ${rpclib_ROOT_DIR}")
+    endif ()
+    find_package(Boost 1.69 REQUIRED)
+    include_directories(${Boost_INCLUDE_DIRS})
+    include_directories(${CMAKE_PREFIX_PATH}/include)
+    target_link_libraries(athena ${PROJECT_NAME} -lstdc++fs -ldl -fPIC -rdynamic rpclib::rpc ${MPI_CXX_LIBRARIES} hcl ${Boost_LIBRARIES})
+    target_compile_definitions(athena PUBLIC ATHENA_PRELOAD)
+endif()
 find_package(Threads)
-target_link_libraries(${PROJECT_NAME} -ldl ${MPI_CXX_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} -lunwind -lunwind-ppc64 -ldw)
+target_link_libraries(${PROJECT_NAME} -ldl ${MPI_CXX_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
 set_target_properties(${PROJECT_NAME} PROPERTIES
         VERSION ${PROJECT_VERSION}
         SOVERSION 1

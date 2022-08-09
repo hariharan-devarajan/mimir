@@ -10,9 +10,6 @@
 #include <mimir/constant.h>
 #include <mimir/log/logger.h>
 #include <mpi.h>
-#include <athena/api/interceptor.h>
-#include <athena/client/athena_client.h>
-#include <athena/server/posix_io.h>
 #include <dlfcn.h>
 
 MimirStatus file_prefetch(mimir::FileAdvice &advice) {}

@@ -4,110 +4,23 @@
 
 #ifndef MIMIR_MIMIR_INTERCEPTOR_H
 #define MIMIR_MIMIR_INTERCEPTOR_H
-#include <cxxabi.h>
 #include <mimir/log/logger.h>
-#include <signal.h>
-
-#include <cstring>
-
-#include "job_configuration.h"
-#include <cxxabi.h>
-#include <execinfo.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <mutex>
-#include <shared_mutex>
+#include <unistd.h>
+
+#include <atomic>
+#include <cstring>
 #include <experimental/filesystem>
 #include <fstream>
-#include <libunwind.h>
-#include <elfutils/libdwfl.h>
+#include <mutex>
+#include <shared_mutex>
+#include <unordered_map>
+#include <unordered_set>
+
+#include "job_configuration.h"
 
 namespace fs = std::experimental::filesystem;
-
-/** Print a demangled stack backtrace of the caller function to FILE* out. */
-inline void debugInfo(std::stringstream &out,const void* ip)
-{
-
-  char *debuginfo_path=NULL;
-
-  Dwfl_Callbacks callbacks={
-      .find_elf=dwfl_linux_proc_find_elf,
-      .find_debuginfo=dwfl_standard_find_debuginfo,
-      .debuginfo_path=&debuginfo_path,
-  };
-
-  Dwfl* dwfl=dwfl_begin(&callbacks);
-  assert(dwfl!=NULL);
-
-  assert(dwfl_linux_proc_report (dwfl, getpid())==0);
-  assert(dwfl_report_end (dwfl, NULL, NULL)==0);
-
-  Dwarf_Addr addr = (uintptr_t)ip;
-
-  Dwfl_Module* module=dwfl_addrmodule (dwfl, addr);
-
-  const char* function_name = dwfl_module_addrname(module, addr);
-  out << function_name << "(";
-
-  Dwfl_Line *line=dwfl_getsrc (dwfl, addr);
-  if(line!=NULL)
-  {
-    int nline;
-    Dwarf_Addr addr;
-    const char* filename=dwfl_lineinfo (line, &addr,&nline,NULL,NULL,NULL);
-
-    out << function_name << strrchr(filename,'/')+1 << ":" << nline;
-  }
-  else
-  {
-    out << function_name << ip;
-  }
-}
-
-inline void printStackTrace(int skip,int sig)
-{
-  unw_context_t uc;
-  unw_getcontext(&uc);
-
-  unw_cursor_t cursor;
-  unw_init_local(&cursor, &uc);
-  std::stringstream ss;
-  while(unw_step(&cursor)>0)
-  {
-
-    unw_word_t ip;
-    unw_get_reg(&cursor, UNW_REG_IP, &ip);
-
-    unw_word_t offset;
-    char name[32];
-    //assert(unw_get_proc_name(&cursor, name,sizeof(name), &offset)==0);
-
-    if(skip<=0)
-    {
-      if (unw_get_proc_name(&cursor, name,sizeof(name), &offset)==0) {
-        ss << "\tat ";
-        debugInfo(ss, (void *) (ip - 4));
-        ss << ")\n";
-      } else {
-        break;
-      }
-    }
-
-    if(strcmp(name,"main")==0)
-      break;
-
-    skip--;
-
-  }
-  int pid = getpid();
-  mimir::Logger::Instance("MIMIR")->log(mimir::LOG_ERROR, "Error: signal %d on Process %d:\n%s", sig, pid, ss.str().c_str());
-
-}
-
-inline void handler_mimir(int sig) {
-  printStackTrace(0, sig);
-  exit(0);
-}
 
 extern bool is_mpi();
 extern void set_mpi();
@@ -131,8 +44,6 @@ namespace mimir {
                                                            "Destructing Tracker");
         }
         Tracker(): _track_fd(), _track_files(), _exclude_files(), local(0), remote(0){
-            signal(SIGSEGV, handler_mimir);
-            signal(SIGABRT, handler_mimir);  // install our handler
             mimir::Logger::Instance("MIMIR")->log(mimir::LOG_INFO,
                                                            "Constructing Tracker");
         }

@@ -8,7 +8,6 @@
 #include <assert.h>
 #include <mimir/advice/advice.h>
 #include <mimir/advice/advice_type.h>
-#include <hcl/common/data_structures.h>
 #include <stdint-gcc.h>
 
 #include <memory>
