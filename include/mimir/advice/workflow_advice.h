@@ -94,10 +94,57 @@ class WorkflowAdvice : public Advice {
     _runtime_minutes = other._runtime_minutes;
     return *this;
   }
+
+  bool operator!=(const WorkflowAdvice& other) const {
+    return !(other == *this);
+  }
   bool operator<(const WorkflowAdvice& other) const {
     return Advice::operator<(other);
   }
   bool operator>(const WorkflowAdvice& other) const { return !(*this < other); }
+  bool operator==(const WorkflowAdvice& other) const {
+    return Advice::operator==(other) && this->is_same(other);
+  }
+  bool is_same(const WorkflowAdvice& other) const {
+    if (!Advice::is_same(other)) return false;
+    if (!(this->_num_cpu_cores_used == other._num_cpu_cores_used &&
+          this->_num_gpus_used == other._num_gpus_used &&
+          this->_num_apps == other._num_apps &&
+          this->_application_file_dag == other._application_file_dag &&
+          this->_io_size_mb == other._io_size_mb &&
+          this->_per_io_data == other._per_io_data &&
+          this->_per_io_metadata == other._per_io_metadata &&
+          this->_ts_distribution == other._ts_distribution &&
+          this->_runtime_minutes == other._runtime_minutes))
+      return false;
+
+    if (_independent_files.size() != other._independent_files.size())
+      return false;
+    for (int i = 0; i < _independent_files.size(); ++i) {
+      if (_independent_files[i] != other._independent_files[i]) return false;
+    }
+    if (_shared_files.size() != other._shared_files.size()) return false;
+    for (auto element : _shared_files) {
+      auto other_iter = other._shared_files.find(element.first);
+      if (other_iter == other._shared_files.end()) return false;
+      if (other_iter->second.size() != element.second.size()) return false;
+      for (int i = 0; i < element.second.size(); ++i)
+        if (element.second[i] != other_iter->second[i]) return false;
+    }
+
+    if (_interfaces_used.size() != other._interfaces_used.size()) return false;
+    for (int i = 0; i < _interfaces_used.size(); ++i) {
+      if (_interfaces_used[i] != other._interfaces_used[i]) return false;
+    }
+    if (_file_access_pattern.size() != other._file_access_pattern.size())
+      return false;
+    for (auto element : _file_access_pattern) {
+      auto other_iter = other._file_access_pattern.find(element.first);
+      if (other_iter == other._file_access_pattern.end()) return false;
+      if (other_iter->second != element.second) return false;
+    }
+    return true;
+  }
 };
 }  // namespace mimir
 

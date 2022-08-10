@@ -5,8 +5,8 @@
 #ifndef MIMIR_FILE_ADVICE_H
 #define MIMIR_FILE_ADVICE_H
 #include <mimir/advice/advice.h>
-#include <mimir/common/enumeration.h>
 #include <mimir/common/data_structure.h>
+#include <mimir/common/enumeration.h>
 namespace mimir {
 class FileAdvice : public Advice {
  public:
@@ -78,7 +78,10 @@ class FileAdvice : public Advice {
   }
   bool operator>(const FileAdvice& other) const { return !(*this < other); }
   bool operator==(const FileAdvice& other) const {
-    return Advice::operator==(other) && _format == other._format &&
+    return Advice::operator==(other) && this->is_same(other);
+  }
+  bool is_same(const FileAdvice& other) const {
+    return Advice::is_same(other) && _format == other._format &&
            _size_mb == other._size_mb && _name == other._name &&
            _read_distribution == other._read_distribution &&
            _write_distribution == other._write_distribution &&
@@ -88,6 +91,7 @@ class FileAdvice : public Advice {
            _placement_device == other._placement_device &&
            _prefetch == other._prefetch;
   }
+  bool operator!=(const FileAdvice& other) const { return !(other == *this); }
 };
 }  // namespace mimir
 

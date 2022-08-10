@@ -37,9 +37,13 @@ class ApplicationAdvice : public WorkflowAdvice {
         _name(),
         _rank_file_dag() {}
   ApplicationAdvice(const ApplicationAdvice& other)
-      : WorkflowAdvice(other), _name(), _rank_file_dag() {}
+      : WorkflowAdvice(other),
+        _name(other._name),
+        _rank_file_dag(other._rank_file_dag) {}
   ApplicationAdvice(const ApplicationAdvice&& other)
-      : WorkflowAdvice(other), _name(), _rank_file_dag() {}
+      : WorkflowAdvice(other),
+        _name(other._name),
+        _rank_file_dag(other._rank_file_dag) {}
   ApplicationAdvice& operator=(const ApplicationAdvice& other) {
     WorkflowAdvice::operator=(other);
     this->_name = other._name;
@@ -52,6 +56,17 @@ class ApplicationAdvice : public WorkflowAdvice {
 
   bool operator>(const ApplicationAdvice& other) const {
     return !(*this < other);
+  }
+  bool operator!=(const ApplicationAdvice& other) const {
+    return !(other == *this);
+  }
+  bool operator==(const ApplicationAdvice& other) const {
+    return WorkflowAdvice::operator==(other) && this->is_same(other);
+  }
+  bool is_same(const ApplicationAdvice& other) const {
+    return WorkflowAdvice::is_same(other) && this->_name == other._name &&
+           this->_rank_file_dag == other._rank_file_dag;
+    ;
   }
 };
 }  // namespace mimir

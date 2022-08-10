@@ -131,18 +131,55 @@ struct Edge {
   bool operator==(const Edge<SOURCE, DESTINATION>& other) const {
     return source == other.source && destination == other.destination;
   }
+  bool operator!=(const Edge<SOURCE, DESTINATION>& other) const {
+    return !(other == *this);
+  }
 };
 
 struct ApplicationFileDAG {
   std::vector<ApplicationIndex> applications;
   std::vector<FileIndex> files;
   std::vector<Edge<ApplicationIndex, FileIndex>> edges;
+  bool operator==(const ApplicationFileDAG& other) const {
+    if (applications.size() != other.applications.size()) return false;
+    for (int i = 0; i < applications.size(); ++i) {
+      if (applications[i] != other.applications[i]) return false;
+    }
+    if (files.size() != other.files.size()) return false;
+    for (int i = 0; i < files.size(); ++i) {
+      if (files[i] != other.files[i]) return false;
+    }
+    if (edges.size() != other.edges.size()) return false;
+    for (int i = 0; i < edges.size(); ++i) {
+      if (edges[i] != other.edges[i]) return false;
+    }
+    return true;
+  }
+  bool operator!=(const ApplicationFileDAG& other) const {
+    return !(other == *this);
+  }
 };
 
 struct RankFileDAG {
   std::vector<RankIndex> ranks;
   std::vector<FileIndex> files;
   std::vector<Edge<RankIndex, FileIndex>> edges;
+  bool operator==(const RankFileDAG& other) const {
+    if (ranks.size() != other.ranks.size()) return false;
+    for (int i = 0; i < ranks.size(); ++i)
+      if (ranks[i] != other.ranks[i]) return false;
+
+    if (files.size() != other.files.size()) return false;
+    for (int i = 0; i < files.size(); ++i)
+      if (files[i] != other.files[i]) return false;
+
+    if (edges.size() != other.edges.size()) return false;
+    for (int i = 0; i < edges.size(); ++i)
+      if (edges[i] != other.edges[i]) return false;
+
+    return true;
+  }
+  bool operator!=(const RankFileDAG& other) const { return !(other == *this); }
 };
 
 struct TransferSizeDistribution {

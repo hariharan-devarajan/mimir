@@ -80,8 +80,14 @@ class JobConfigurationAdvice : public Advice {
   bool operator>(const JobConfigurationAdvice& other) const {
     return !(*this < other);
   }
+  bool operator!=(const JobConfigurationAdvice& other) const {
+    return !(other == *this);
+  }
   bool operator==(const JobConfigurationAdvice& other) const {
-    return Advice::operator==(other) && _num_nodes == other._num_nodes &&
+    return Advice::operator==(other) && this->is_same(other);
+  }
+  bool is_same(const JobConfigurationAdvice& other) const {
+    return Advice::is_same(other) && _num_nodes == other._num_nodes &&
            _job_id == other._job_id &&
            _num_cores_per_node == other._num_cores_per_node &&
            _num_gpus_per_node == other._num_gpus_per_node &&
@@ -104,36 +110,36 @@ struct hash<mimir::JobConfigurationAdvice> {
 
 using json = nlohmann::json;
 namespace mimir {
-    inline void to_json(json& j, const JobConfigurationAdvice& p) {
-        j = json();
-        to_json(j, (mimir::Advice&)p);
-        j["job_id"] = p._job_id;
-        j["num_nodes"] = p._num_nodes;
-        j["num_cores_per_node"] = p._num_cores_per_node;
-        j["num_gpus_per_node"] = p._num_gpus_per_node;
+inline void to_json(json& j, const JobConfigurationAdvice& p) {
+  j = json();
+  to_json(j, (mimir::Advice&)p);
+  j["job_id"] = p._job_id;
+  j["num_nodes"] = p._num_nodes;
+  j["num_cores_per_node"] = p._num_cores_per_node;
+  j["num_gpus_per_node"] = p._num_gpus_per_node;
 
-        j["devices"] = p._devices;
-        j["job_time_minutes"] = p._job_time_minutes;
-        j["node_names"] = p._node_names;
+  j["devices"] = p._devices;
+  j["job_time_minutes"] = p._job_time_minutes;
+  j["node_names"] = p._node_names;
 
-        j["network_protocol"] = p._network_protocol;
-        j["rpc_port"] = p._rpc_port;
-        j["rpc_threads"] = p._rpc_threads;
-    }
+  j["network_protocol"] = p._network_protocol;
+  j["rpc_port"] = p._rpc_port;
+  j["rpc_threads"] = p._rpc_threads;
+}
 
-    inline void from_json(const json& j, JobConfigurationAdvice& p) {
-        from_json(j, (mimir::Advice&)p);
-        j.at("job_id").get_to(p._job_id);
-        j.at("num_nodes").get_to(p._num_nodes);
-        j.at("num_cores_per_node").get_to(p._num_cores_per_node);
-        j.at("num_gpus_per_node").get_to(p._num_gpus_per_node);
-        j.at("devices").get_to(p._devices);
-        j.at("job_time_minutes").get_to(p._job_time_minutes);
-        j.at("node_names").get_to(p._node_names);
-        j.at("network_protocol").get_to(p._network_protocol);
-        j.at("rpc_port").get_to(p._rpc_port);
-        j.at("rpc_threads").get_to(p._rpc_threads);
-    }
-} // namespace ns
+inline void from_json(const json& j, JobConfigurationAdvice& p) {
+  from_json(j, (mimir::Advice&)p);
+  j.at("job_id").get_to(p._job_id);
+  j.at("num_nodes").get_to(p._num_nodes);
+  j.at("num_cores_per_node").get_to(p._num_cores_per_node);
+  j.at("num_gpus_per_node").get_to(p._num_gpus_per_node);
+  j.at("devices").get_to(p._devices);
+  j.at("job_time_minutes").get_to(p._job_time_minutes);
+  j.at("node_names").get_to(p._node_names);
+  j.at("network_protocol").get_to(p._network_protocol);
+  j.at("rpc_port").get_to(p._rpc_port);
+  j.at("rpc_threads").get_to(p._rpc_threads);
+}
+}  // namespace mimir
 
 #endif  // MIMIR_JOB_CONFIGURATION_ADVICE_H

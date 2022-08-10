@@ -4,8 +4,8 @@ project(mimir VERSION 1.0.0 DESCRIPTION "Mimir: Extending POSIX interface for ex
 set(CMAKE_CXX_STANDARD 17)
 
 include(GNUInstallDirs)
-include_directories(src)
-include_directories(include)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 add_definitions(-w)
 option(ENABLE_ATHENA "Build Athena" OFF)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -rdynamic")
@@ -30,7 +30,7 @@ set(MIMIR_LIBRARY_SRC include/mimir/mimir.h
         include/mimir/constant.h
         include/mimir/mimir.h
         include/mimir/typedef.h
-        src/mimir/log/logger.h
+        include/mimir/log/logger.h
         src/mimir/log/logger.cpp
         include/mimir/common/error_code.h
         include/mimir/advice/middleware_advice.h
@@ -40,10 +40,10 @@ set(MIMIR_LIBRARY_SRC include/mimir/mimir.h
         include/mimir/api/job_configuration.h
         src/mimir/advice/advice.cpp
         src/mimir/advice/advice_handler.h
-        include/mimir/api/mimir_interceptor.h src/mimir/api/mimir_interceptor.cpp include/mimir/common/debug.h src/mimir/common/debug.cpp)
+        include/mimir/api/mimir_interceptor.h src/mimir/api/mimir_interceptor.cpp include/mimir/common/debug.h src/mimir/common/debug.cpp include/mimir/advice/config.h)
 
 add_library(${PROJECT_NAME} SHARED ${MIMIR_LIBRARY_SRC})
-if(ENABLE_ATHENA)
+if (ENABLE_ATHENA)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DHCL_ENABLE_RPCLIB")
     message("HCL_ENABLE_RPCLIB: ${HCL_ENABLE_RPCLIB}")
 
@@ -54,19 +54,19 @@ if(ENABLE_ATHENA)
     add_library(athena SHARED ${ATHENA_LIBRARY_SRC})
     add_subdirectory(external/hcl)
     include_directories(external/hcl/include)
-endif()
+endif ()
 find_package(nlohmann_json 3.10.5 REQUIRED)
 
-if(nlohmann_json_FOUND)
+if (nlohmann_json_FOUND)
     message(STATUS "found nlohmann_json")
     target_link_libraries(${PROJECT_NAME} nlohmann_json::nlohmann_json)
-endif()
+endif ()
 find_package(MPI REQUIRED COMPONENTS CXX)
 if (MPI_FOUND)
     message(STATUS "found mpi.h at ${MPI_CXX_INCLUDE_DIRS}")
     include_directories(${MPI_CXX_INCLUDE_DIRS})
 endif ()
-if(ENABLE_ATHENA)
+if (ENABLE_ATHENA)
     find_package(rpclib REQUIRED)
     if (rpclib_FOUND)
         message(STATUS "found rpclib ${rpclib_ROOT_DIR}")
@@ -76,7 +76,7 @@ if(ENABLE_ATHENA)
     include_directories(${CMAKE_PREFIX_PATH}/include)
     target_link_libraries(athena ${PROJECT_NAME} -lstdc++fs -ldl -fPIC -rdynamic rpclib::rpc ${MPI_CXX_LIBRARIES} hcl ${Boost_LIBRARIES})
     target_compile_definitions(athena PUBLIC ATHENA_PRELOAD)
-endif()
+endif ()
 find_package(Threads)
 target_link_libraries(${PROJECT_NAME} -ldl ${MPI_CXX_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
 set_target_properties(${PROJECT_NAME} PROPERTIES
