@@ -28,4 +28,13 @@ MimirStatus application_advice_end(MimirHandler &handler) {
       ->remove_advice(key, handler._advice_index);
   return MIMIR_SUCCESS;
 }
+
+MimirStatus free_applications() {
+  auto ptr = AdviceHandler<ApplicationAdvice>::Instance(
+      {mimir::PrimaryAdviceType::JOB_APPLICATION,
+       mimir::OperationAdviceType::NO_OP});
+  ptr->clear();
+  ptr.reset();
+  return MIMIR_SUCCESS;
+}
 }  // namespace mimir

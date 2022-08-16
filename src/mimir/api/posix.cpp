@@ -4,13 +4,13 @@
 
 #include <athena/api/interceptor.h>
 #include <athena/api/posix.h>
+#include <dlfcn.h>
 #include <mimir/advice/advice_handler.h>
 #include <mimir/api/posix.h>
 #include <mimir/common/error_code.h>
 #include <mimir/constant.h>
 #include <mimir/log/logger.h>
 #include <mpi.h>
-#include <dlfcn.h>
 
 MimirStatus file_prefetch(mimir::FileAdvice &advice) {}
 namespace mimir {
@@ -81,6 +81,14 @@ MimirStatus file_advice_end(MimirHandler &handler) {
   auto advice = AdviceHandler<FileAdvice>::Instance(handler._type)
                     ->remove_advice(key, handler._advice_index);
   MIMIR_TRACKER()->remove(advice._name);
+  return MIMIR_SUCCESS;
+}
+
+MimirStatus free_files() {
+  auto ptr = AdviceHandler<FileAdvice>::Instance(
+      {mimir::PrimaryAdviceType::DATA_FILE, mimir::OperationAdviceType::NO_OP});
+  ptr->clear();
+  ptr.reset();
   return MIMIR_SUCCESS;
 }
 }  // namespace mimir

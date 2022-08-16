@@ -21,6 +21,8 @@ MimirStatus operation_advice_begin(POSIXFileOperationAdvice &payload,
                                    MimirHandler &handler);
 MimirStatus operation_advice_end(MimirHandler &handler);
 MimirStatus file_advice_end(MimirHandler &handler);
+
+MimirStatus free_files();
 }  // namespace mimir
 
 #endif  // MIMIR_POSIX_H

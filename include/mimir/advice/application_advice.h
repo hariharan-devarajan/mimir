@@ -32,7 +32,7 @@ class ApplicationAdvice : public WorkflowAdvice {
   RankFileDAG _rank_file_dag;
 
   ApplicationAdvice()
-      : WorkflowAdvice(AdviceType(PrimaryAdviceType::JOB_WORKFLOW,
+      : WorkflowAdvice(AdviceType(PrimaryAdviceType::JOB_APPLICATION,
                                   OperationAdviceType::NO_OP)),
         _name(),
         _rank_file_dag() {}

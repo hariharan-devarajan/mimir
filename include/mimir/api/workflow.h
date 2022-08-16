@@ -12,6 +12,7 @@ namespace mimir {
 MimirStatus workflow_advice_begin(WorkflowAdvice &payload,
                                   MimirHandler &handler);
 MimirStatus workflow_advice_end(MimirHandler &handler);
+MimirStatus free_workflow();
 }  // namespace mimir
 
 #endif  // MIMIR_API_WORKFLOW_H

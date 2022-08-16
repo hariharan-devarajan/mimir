@@ -28,4 +28,13 @@ MimirStatus workflow_advice_end(MimirHandler &handler) {
       ->remove_advice(key, handler._advice_index);
   return MIMIR_SUCCESS;
 }
+
+MimirStatus free_workflow() {
+  auto ptr = AdviceHandler<WorkflowAdvice>::Instance(
+      {mimir::PrimaryAdviceType::JOB_WORKFLOW,
+       mimir::OperationAdviceType::NO_OP});
+  ptr->clear();
+  ptr.reset();
+  return MIMIR_SUCCESS;
+}
 }  // namespace mimir

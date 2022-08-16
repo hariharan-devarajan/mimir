@@ -13,10 +13,11 @@
 
 #include <memory>
 #include <mutex>
-#include <shared_mutex>
 #include <set>
+#include <shared_mutex>
 #include <unordered_map>
 #include <unordered_set>
+
 #include "mimir/common/debug.h"
 
 namespace mimir {
@@ -29,7 +30,19 @@ class AdviceHandler {
 
   std::unordered_map<MimirKey, std::unordered_set<ADVICE>> _conflicts;
   std::shared_mutex _advice_mutex;
+
  public:
+  void clear() {
+    for (auto item : _conflicts) {
+      item.second.clear();
+    }
+    _conflicts.clear();
+    for (auto item : _advice) {
+      item.second.clear();
+    }
+    _advice.clear();
+    _instance.reset();
+  }
   AdviceHandler() : _conflicts(), _advice() {}
 
   static std::shared_ptr<AdviceHandler<ADVICE>> Instance(AdviceType type) {
@@ -131,8 +144,9 @@ class AdviceHandler {
     return MIMIR_SUCCESS;
   }
 };
-  template <typename ADVICE>
-  std::shared_ptr<AdviceHandler<ADVICE>> mimir::AdviceHandler<ADVICE>::_instance = nullptr;
+template <typename ADVICE>
+std::shared_ptr<AdviceHandler<ADVICE>> mimir::AdviceHandler<ADVICE>::_instance =
+    nullptr;
 
 }  // namespace mimir
 

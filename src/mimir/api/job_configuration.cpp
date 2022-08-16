@@ -28,4 +28,12 @@ MimirStatus job_configuration_advice_end(MimirHandler &handler) {
       ->remove_advice(key, handler._advice_index);
   return MIMIR_SUCCESS;
 }
+MimirStatus free_job_configuration() {
+  auto ptr = AdviceHandler<JobConfigurationAdvice>::Instance(
+      {mimir::PrimaryAdviceType::JOB_CONFIGURATION,
+       mimir::OperationAdviceType::NO_OP});
+  ptr->clear();
+  ptr.reset();
+  return MIMIR_SUCCESS;
+}
 }  // namespace mimir
