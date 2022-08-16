@@ -23,6 +23,10 @@ set(MIMIR_LIBRARY_SRC include/mimir/mimir.h
         include/mimir/advice/workflow_advice.h
         include/mimir/api/posix.h
         src/mimir/api/posix.cpp
+        include/mimir/api/workflow.h
+        src/mimir/api/workflow.cpp
+        include/mimir/api/application.h
+        src/mimir/api/application.cpp
         include/mimir/common/data_structure.h
         include/mimir/common/enumeration.h
         include/mimir/common/typedef.h
@@ -39,8 +43,12 @@ set(MIMIR_LIBRARY_SRC include/mimir/mimir.h
         src/mimir/api/job_configuration.cpp
         include/mimir/api/job_configuration.h
         src/mimir/advice/advice.cpp
-        src/mimir/advice/advice_handler.h
-        include/mimir/api/mimir_interceptor.h src/mimir/api/mimir_interceptor.cpp include/mimir/common/debug.h src/mimir/common/debug.cpp include/mimir/advice/config.h)
+        include/mimir/advice/advice_handler.h
+        include/mimir/api/mimir_interceptor.h
+        src/mimir/api/mimir_interceptor.cpp
+        include/mimir/common/debug.h
+        src/mimir/common/debug.cpp
+        include/mimir/advice/config.h)
 
 add_library(${PROJECT_NAME} SHARED ${MIMIR_LIBRARY_SRC})
 if (ENABLE_ATHENA)

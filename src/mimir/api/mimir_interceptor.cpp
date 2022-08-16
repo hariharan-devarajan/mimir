@@ -2,7 +2,11 @@
 // Created by hariharan on 2/23/22.
 //
 
+#include <mimir/api/application.h>
+#include <mimir/api/job_configuration.h>
 #include <mimir/api/mimir_interceptor.h>
+#include <mimir/api/posix.h>
+#include <mimir/api/workflow.h>
 #include <mimir/constant.h>
 
 namespace mimir {
@@ -10,6 +14,9 @@ bool is_mpi = false;
 bool is_tracing = false;
 mimir::Tracker* tracker_instance = nullptr;
 mimir::Config* global_app_config = nullptr;
+bool intents_loaded = false;
+mimir::MimirHandler* handlers;
+size_t num_handlers;
 }  // namespace mimir
 
 extern bool is_mpi() { return mimir::is_mpi; }
@@ -101,4 +108,54 @@ extern MimirStatus mimir_init_config() {
 extern MimirStatus mimir_finalize_config() {
   delete mimir::global_app_config;
   return mimir::MIMIR_SUCCESS;
+}
+
+extern MimirStatus insert_loaded_intents() {
+  if (!mimir::intents_loaded && mimir::global_app_config != nullptr) {
+    size_t num_jobs = 1, num_workflow = 1,
+           num_apps = mimir::global_app_config->_app_repo.size(),
+           num_files = mimir::global_app_config->_file_repo.size();
+    mimir::num_handlers = num_jobs + num_workflow + num_apps + num_files;
+    mimir::handlers = static_cast<mimir::MimirHandler*>(
+        calloc(mimir::num_handlers, sizeof(mimir::MimirHandler)));
+    /* Start all intents */
+    size_t current_handler_index = 0;
+    mimir::job_configuration_advice_begin(
+        mimir::global_app_config->_job_config,
+        mimir::handlers[current_handler_index++]);
+    mimir::workflow_advice_begin(mimir::global_app_config->_workflow,
+                                 mimir::handlers[current_handler_index++]);
+    for (size_t app_index = 0; app_index < num_apps; ++app_index) {
+      mimir::application_advice_begin(
+          mimir::global_app_config->_app_repo[app_index],
+          mimir::handlers[current_handler_index++]);
+    }
+    for (size_t file_index = 0; file_index < num_files; ++num_files) {
+      mimir::file_advice_begin(mimir::global_app_config->_file_repo[file_index],
+                               mimir::handlers[current_handler_index++]);
+    }
+    mimir::intents_loaded = true;
+  }
+}
+extern MimirStatus remove_loaded_intents() {
+  if (mimir::intents_loaded) {
+    size_t num_jobs = 1, num_workflow = 1,
+           num_apps = mimir::global_app_config->_app_repo.size(),
+           num_files = mimir::global_app_config->_file_repo.size();
+    assert(mimir::num_handlers ==
+           (num_jobs + num_workflow + num_apps + num_files));
+    /* End all intents */
+    size_t current_handler_index = 0;
+    mimir::job_configuration_advice_end(
+        mimir::handlers[current_handler_index++]);
+    mimir::workflow_advice_end(mimir::handlers[current_handler_index++]);
+    for (size_t app_index = 0; app_index < num_apps; ++app_index) {
+      mimir::application_advice_end(mimir::handlers[current_handler_index++]);
+    }
+    for (size_t file_index = 0; file_index < num_files; ++num_files) {
+      mimir::file_advice_end(mimir::handlers[current_handler_index++]);
+    }
+    free(mimir::handlers);
+    mimir::intents_loaded = false;
+  }
 }

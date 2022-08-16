@@ -31,7 +31,7 @@ class Logger {
     }
     return instance;
   }
-  void log(LoggerType type, char* string, ...);
+  void log(LoggerType type, const char* string, ...);
 };
 }  // namespace mimir
 

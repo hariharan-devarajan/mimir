@@ -8,7 +8,7 @@ std::unordered_map<std::string, std::shared_ptr<mimir::Logger>>
     mimir::Logger::instance_map =
         std::unordered_map<std::string, std::shared_ptr<mimir::Logger>>();
 
-void mimir::Logger::log(LoggerType type, char* string, ...) {
+void mimir::Logger::log(LoggerType type, const char* string, ...) {
   va_list args;
   va_start(args, string);
   char buffer[256];

@@ -126,6 +126,9 @@ extern mimir::Config* MIMIR_CONFIG();
 extern MimirStatus mimir_init_config();
 extern MimirStatus mimir_finalize_config();
 
+extern MimirStatus insert_loaded_intents();
+extern MimirStatus remove_loaded_intents();
+
 inline mimir::JobConfigurationAdvice load_job_details() {
   assert(mimir_init_config() == 0);
   return MIMIR_CONFIG()->_job_config;

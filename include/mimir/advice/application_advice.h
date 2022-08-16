@@ -71,6 +71,15 @@ class ApplicationAdvice : public WorkflowAdvice {
 };
 }  // namespace mimir
 
+namespace std {
+template <>
+struct hash<mimir::ApplicationAdvice> {
+  size_t operator()(const mimir::ApplicationAdvice& k) const {
+    return k._index;
+  }
+};
+}  // namespace std
+
 using json = nlohmann::json;
 namespace mimir {
 inline void to_json(json& j, const ApplicationAdvice& p) {

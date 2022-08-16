@@ -2,8 +2,8 @@
 // Created by haridev on 2/16/22.
 //
 
-#ifndef MIMIR_JOB_CONFIGURATION_H
-#define MIMIR_JOB_CONFIGURATION_H
+#ifndef MIMIR_API_JOB_CONFIGURATION_H
+#define MIMIR_API_JOB_CONFIGURATION_H
 
 #include <mimir/advice/job_configuration_advice.h>
 #include <mimir/typedef.h>
@@ -14,4 +14,4 @@ MimirStatus job_configuration_advice_begin(JobConfigurationAdvice &payload,
 MimirStatus job_configuration_advice_end(MimirHandler &handler);
 }  // namespace mimir
 
-#endif  // MIMIR_JOB_CONFIGURATION_H
+#endif  // MIMIR_API_JOB_CONFIGURATION_H
