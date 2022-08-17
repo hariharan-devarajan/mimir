@@ -13,6 +13,7 @@
 #include <memory>
 #include <nlohmann/json.hpp>
 #include <string>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -137,22 +138,23 @@ struct Edge {
 };
 
 struct ApplicationFileDAG {
-  std::vector<ApplicationIndex> applications;
-  std::vector<FileIndex> files;
+  std::unordered_set<ApplicationIndex> applications;
+  std::unordered_set<FileIndex> files;
   std::vector<Edge<ApplicationIndex, FileIndex>> edges;
   bool operator==(const ApplicationFileDAG& other) const {
     if (applications.size() != other.applications.size()) return false;
-    for (int i = 0; i < applications.size(); ++i) {
-      if (applications[i] != other.applications[i]) return false;
+    for (auto item : applications) {
+      auto iter = other.applications.find(item);
+      if (iter == other.applications.end()) return false;
     }
     if (files.size() != other.files.size()) return false;
-    for (int i = 0; i < files.size(); ++i) {
-      if (files[i] != other.files[i]) return false;
+    for (auto item : files) {
+      auto iter = other.files.find(item);
+      if (iter == other.files.end()) return false;
     }
     if (edges.size() != other.edges.size()) return false;
-    for (int i = 0; i < edges.size(); ++i) {
+    for (int i = 0; i < edges.size(); ++i)
       if (edges[i] != other.edges[i]) return false;
-    }
     return true;
   }
   bool operator!=(const ApplicationFileDAG& other) const {
@@ -161,22 +163,24 @@ struct ApplicationFileDAG {
 };
 
 struct RankFileDAG {
-  std::vector<RankIndex> ranks;
-  std::vector<FileIndex> files;
+  std::unordered_set<RankIndex> ranks;
+  std::unordered_set<FileIndex> files;
   std::vector<Edge<RankIndex, FileIndex>> edges;
   bool operator==(const RankFileDAG& other) const {
     if (ranks.size() != other.ranks.size()) return false;
-    for (int i = 0; i < ranks.size(); ++i)
-      if (ranks[i] != other.ranks[i]) return false;
-
+    for (auto item : ranks) {
+      auto iter = other.ranks.find(item);
+      if (iter == other.ranks.end()) return false;
+    }
     if (files.size() != other.files.size()) return false;
-    for (int i = 0; i < files.size(); ++i)
-      if (files[i] != other.files[i]) return false;
+    for (auto item : files) {
+      auto iter = other.files.find(item);
+      if (iter == other.files.end()) return false;
+    }
 
     if (edges.size() != other.edges.size()) return false;
     for (int i = 0; i < edges.size(); ++i)
       if (edges[i] != other.edges[i]) return false;
-
     return true;
   }
   bool operator!=(const RankFileDAG& other) const { return !(other == *this); }
@@ -280,6 +284,14 @@ struct hash<mimir::File> {
 template <>
 struct hash<mimir::MimirKey> {
   size_t operator()(const mimir::MimirKey& k) const { return k._id; }
+};
+
+template <>
+struct hash<mimir::Storage> {
+  size_t operator()(const mimir::Storage& k) const {
+    size_t hash_val = hash<std::string>()(k._mount_point);
+    return hash_val;
+  }
 };
 
 }  // namespace std
