@@ -25,6 +25,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -rdynamic")
 set(MIMIR_PRIVATE_INCLUDE)
 set(MIMIR_PUBLIC_INCLUDE ${CMAKE_CURRENT_SOURCE_DIR}/include/mimir/mimir.h
         ${CMAKE_CURRENT_SOURCE_DIR}/include/mimir/advice/advice.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/mimir/advice/no_advice.h
         ${CMAKE_CURRENT_SOURCE_DIR}/include/mimir/advice/advice_type.h
         ${CMAKE_CURRENT_SOURCE_DIR}/include/mimir/advice/application_advice.h
         ${CMAKE_CURRENT_SOURCE_DIR}/include/mimir/advice/dataset_advice.h
