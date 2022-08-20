@@ -286,8 +286,8 @@ endif ()
 set_target_properties(${PROJECT_NAME} PROPERTIES LINKER_LANGUAGE CXX)
 
 
-option(BUILD_TEST "Build the unit tests" ON)
-if (BUILD_TEST)
+option(MIMIR_BUILD_TEST "Build the unit tests" OFF)
+if (MIMIR_BUILD_TEST)
     enable_testing()
     add_subdirectory(test)
 endif ()
