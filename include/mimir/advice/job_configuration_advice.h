@@ -21,7 +21,10 @@ class JobConfigurationAdvice : public Advice {
   std::string _network_protocol;
   uint16_t _rpc_port;
   uint16_t _rpc_threads;
-
+  ~JobConfigurationAdvice(){
+      _devices.clear();
+      _node_names.clear();
+  }
   JobConfigurationAdvice()
       : Advice(AdviceType(PrimaryAdviceType::JOB_CONFIGURATION,
                           OperationAdviceType::NO_OP)),

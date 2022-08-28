@@ -20,6 +20,7 @@ class FileAdvice : public Advice {
   int _placement_device;
   float _per_io_data, _per_io_metadata;
   bool _prefetch;
+  FileSharing _file_sharing;
 
   FileAdvice()
       : Advice(AdviceType(PrimaryAdviceType::DATA_FILE,
@@ -34,7 +35,8 @@ class FileAdvice : public Advice {
         _per_io_metadata(),
         _current_device(0),
         _placement_device(0),
-        _prefetch(false) {}
+        _prefetch(false),
+        _file_sharing(FileSharing::FILE_SHARING_NONE){}
   FileAdvice(const FileAdvice& other)
       : Advice(other),
         _format(other._format),
@@ -46,7 +48,8 @@ class FileAdvice : public Advice {
         _per_io_metadata(other._per_io_metadata),
         _current_device(other._current_device),
         _placement_device(other._placement_device),
-        _prefetch(other._prefetch) {}
+        _prefetch(other._prefetch),
+        _file_sharing(other._file_sharing) {}
   FileAdvice(const FileAdvice&& other)
       : Advice(other),
         _format(other._format),
@@ -58,7 +61,8 @@ class FileAdvice : public Advice {
         _per_io_metadata(other._per_io_metadata),
         _current_device(other._current_device),
         _placement_device(other._placement_device),
-        _prefetch(other._prefetch) {}
+        _prefetch(other._prefetch) ,
+        _file_sharing(other._file_sharing) {}
   FileAdvice& operator=(const FileAdvice& other) {
     Advice::operator=(other);
     _format = other._format;
@@ -71,6 +75,7 @@ class FileAdvice : public Advice {
     _current_device = other._current_device;
     _placement_device = other._placement_device;
     _prefetch = other._prefetch;
+    _file_sharing = other._file_sharing;
     return *this;
   }
   bool operator<(const FileAdvice& other) const {
@@ -89,7 +94,8 @@ class FileAdvice : public Advice {
            _per_io_metadata == other._per_io_metadata &&
            _current_device == other._current_device &&
            _placement_device == other._placement_device &&
-           _prefetch == other._prefetch;
+           _prefetch == other._prefetch &&
+           _file_sharing == other._file_sharing;
   }
   bool operator!=(const FileAdvice& other) const { return !(other == *this); }
 };
@@ -119,6 +125,7 @@ inline void to_json(json& j, const FileAdvice& p) {
   j["current_device"] = p._current_device;
   j["placement_device"] = p._placement_device;
   j["prefetch"] = p._prefetch;
+  j["file_sharing"] = p._file_sharing;
 }
 
 inline void from_json(const json& j, FileAdvice& p) {
@@ -133,6 +140,7 @@ inline void from_json(const json& j, FileAdvice& p) {
   j.at("current_device").get_to(p._current_device);
   j.at("placement_device").get_to(p._placement_device);
   j.at("prefetch").get_to(p._prefetch);
+  j.at("file_sharing").get_to(p._file_sharing);
 }
 }  // namespace mimir
 #endif  // MIMIR_FILE_ADVICE_H
