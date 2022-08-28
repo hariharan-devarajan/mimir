@@ -84,6 +84,20 @@ extern MimirStatus mimir_init_config() {
       mimir::global_app_config = new mimir::Config();
       read_json.get_to(*mimir::global_app_config);
       mimir::config_loaded_file = true;
+      std::string sp;
+      std::ifstream("/proc/self/cmdline") >> sp;
+      std::replace( sp.begin(), sp.end() - 1, '\000', ' ');
+      mimir::global_app_config->_current_process_index = -1;
+      for(auto element:mimir::global_app_config->_workflow._app_mapping) {
+        if (strcmp(element.first.c_str(),sp.c_str()) == 0) {
+          mimir::global_app_config->_current_process_index = element.second;
+          break;
+        }
+      }
+      if(mimir::global_app_config->_current_process_index == -1){
+        mimir::Logger::Instance("MIMIR")->log(
+            mimir::LOG_ERROR, "app hash not matching");
+      }
       mimir::Logger::Instance("MIMIR")->log(
           mimir::LOG_INFO, "Loading job configuration from config: end");
     } else {

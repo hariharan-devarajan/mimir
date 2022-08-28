@@ -37,7 +37,7 @@ class WorkflowAdvice : public Advice {
   uint32_t _io_size_mb;
   float _per_io_data, _per_io_metadata;
   TransferSizeDistribution _ts_distribution;
-  std::vector<InterfaceType> _interfaces_used;
+  std::unordered_map<FileIndex, std::unordered_set<InterfaceType>> _interfaces_used;
   std::unordered_map<FileIndex, AccessPattern> _file_access_pattern;
   std::unordered_map<FileIndex, WorkloadType> _file_workload;
   std::unordered_map<std::string, ApplicationIndex> _app_mapping;
@@ -157,8 +157,14 @@ class WorkflowAdvice : public Advice {
     }
 
     if (_interfaces_used.size() != other._interfaces_used.size()) return false;
-    for (int i = 0; i < _interfaces_used.size(); ++i) {
-      if (_interfaces_used[i] != other._interfaces_used[i]) return false;
+    for (auto element : _interfaces_used) {
+      auto other_iter = other._interfaces_used.find(element.first);
+      if (other_iter == other._interfaces_used.end()) return false;
+      if (other_iter->second.size() != element.second.size()) return false;
+      for (auto inter_element : element.second) {
+        auto other_iter_2 = other_iter->second.find(inter_element);
+        if (other_iter_2 == other_iter->second.end()) return false;
+      }
     }
     if (_file_access_pattern.size() != other._file_access_pattern.size())
       return false;

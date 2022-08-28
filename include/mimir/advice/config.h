@@ -11,6 +11,7 @@
 
 namespace mimir {
 struct Config {
+  int _current_process_index;
   JobConfigurationAdvice _job_config;
   WorkflowAdvice _workflow;
   std::vector<ApplicationAdvice> _app_repo;
