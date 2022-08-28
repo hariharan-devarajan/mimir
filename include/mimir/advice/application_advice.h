@@ -13,11 +13,13 @@ class ApplicationAdvice : public WorkflowAdvice {
  private:
   using WorkflowAdvice::_num_apps;
   using WorkflowAdvice::_shared_files;
+  using WorkflowAdvice::_app_mapping;
 
  public:
   using Advice::_type;
   using WorkflowAdvice::_application_file_dag;
   using WorkflowAdvice::_file_access_pattern;
+  using WorkflowAdvice::_file_workload;
   using WorkflowAdvice::_independent_files;
   using WorkflowAdvice::_interfaces_used;
   using WorkflowAdvice::_io_size_mb;
@@ -97,6 +99,7 @@ inline void to_json(json& j, const ApplicationAdvice& p) {
   j["ts_distribution"] = p._ts_distribution;
   j["interfaces_used"] = p._interfaces_used;
   j["file_access_pattern"] = p._file_access_pattern;
+  j["file_workload"] = p._file_workload;
   j["runtime_minutes"] = p._runtime_minutes;
   j["name"] = p._name;
   j["rank_file_dag"] = p._rank_file_dag;
@@ -117,6 +120,7 @@ inline void from_json(const json& j, ApplicationAdvice& p) {
   j.at("runtime_minutes").get_to(p._runtime_minutes);
   j.at("name").get_to(p._name);
   j.at("rank_file_dag").get_to(p._rank_file_dag);
+  j.at("file_workload").get_to(p._file_workload);
 }
 }  // namespace mimir
 #endif  // MIMIR_APPLICATION_ADVICE_H

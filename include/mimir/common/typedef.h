@@ -11,6 +11,8 @@ typedef uint32_t Index;
 typedef Index RankIndex;
 typedef Index FileIndex;
 typedef Index ApplicationIndex;
+typedef unsigned int Hash;
+typedef Hash AppHash;
 
 }  // namespace mimir
 #endif  // MIMIR_COMMON_TYPEDEF_H

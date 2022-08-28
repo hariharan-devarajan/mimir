@@ -11,5 +11,13 @@ enum OperationType { DATA = 0, METADATA = 1 };
 enum DataRepresentation { DATA_BINARY = 0, DATA_ND_ARRAY = 1, DATA_IMAGE = 2 };
 enum Format { FORMAT_BINARY = 0, FORMAT_HDF5 = 1 };
 enum FileSharing { FILE_SHARING_NONE = 0, FILE_PER_PROCESS = 1, FILE_SHARED = 2 };
+enum WorkloadType {
+  WORKLOAD_NO_PATTERN = 0,
+  WRITE_ONLY_WORKLOAD = 1,
+  READ_ONLY_WORKLOAD = 2,
+  RAW_WORKLOAD = 3,
+  WORM_WORKLOAD = 4,
+  UPDATE_WORKLOAD = 5
+};
 }  // namespace mimir
 #endif  // MIMIR_ENUMERATION_H

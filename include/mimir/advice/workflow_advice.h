@@ -11,6 +11,20 @@
 #include <unordered_map>
 
 namespace mimir {
+inline unsigned oat_hash(void const *key, int len) {
+  auto const *p = static_cast<unsigned char const *>(key);
+  unsigned h = 0;
+  for (int i = 0; i < len; i++) {
+    h += p[i];
+    h += (h << 10);
+    h ^= (h >> 6);
+  }
+  h += (h << 3);
+  h ^= (h >> 11);
+  h += (h << 15);
+
+  return h;
+}
 class WorkflowAdvice : public Advice {
  public:
   using Advice::_type;
@@ -25,6 +39,8 @@ class WorkflowAdvice : public Advice {
   TransferSizeDistribution _ts_distribution;
   std::vector<InterfaceType> _interfaces_used;
   std::unordered_map<FileIndex, AccessPattern> _file_access_pattern;
+  std::unordered_map<FileIndex, WorkloadType> _file_workload;
+  std::unordered_map<std::string, ApplicationIndex> _app_mapping;
 
   uint32_t _runtime_minutes;
 
@@ -42,7 +58,9 @@ class WorkflowAdvice : public Advice {
         _ts_distribution(),
         _interfaces_used(),
         _file_access_pattern(),
-        _runtime_minutes() {}
+        _runtime_minutes(),
+        _file_workload(),
+        _app_mapping(){}
 
   WorkflowAdvice()
       : WorkflowAdvice(AdviceType(PrimaryAdviceType::JOB_WORKFLOW,
@@ -61,7 +79,9 @@ class WorkflowAdvice : public Advice {
         _ts_distribution(other._ts_distribution),
         _interfaces_used(other._interfaces_used),
         _file_access_pattern(other._file_access_pattern),
-        _runtime_minutes(other._runtime_minutes) {}
+        _runtime_minutes(other._runtime_minutes),
+        _file_workload(other._file_workload),
+        _app_mapping(other._app_mapping) {}
   WorkflowAdvice(const WorkflowAdvice&& other)
       : Advice(other),
         _num_cpu_cores_used(other._num_cpu_cores_used),
@@ -76,7 +96,9 @@ class WorkflowAdvice : public Advice {
         _ts_distribution(other._ts_distribution),
         _interfaces_used(other._interfaces_used),
         _file_access_pattern(other._file_access_pattern),
-        _runtime_minutes(other._runtime_minutes) {}
+        _runtime_minutes(other._runtime_minutes),
+        _file_workload(other._file_workload) ,
+        _app_mapping(other._app_mapping)  {}
   WorkflowAdvice& operator=(const WorkflowAdvice& other) {
     Advice::operator=(other);
     _num_cpu_cores_used = other._num_cpu_cores_used;
@@ -92,6 +114,8 @@ class WorkflowAdvice : public Advice {
     _interfaces_used = other._interfaces_used;
     _file_access_pattern = other._file_access_pattern;
     _runtime_minutes = other._runtime_minutes;
+    _file_workload = other._file_workload;
+    _app_mapping = other._app_mapping;
     return *this;
   }
 
@@ -143,6 +167,20 @@ class WorkflowAdvice : public Advice {
       if (other_iter == other._file_access_pattern.end()) return false;
       if (other_iter->second != element.second) return false;
     }
+    if (_file_workload.size() != other._file_workload.size())
+      return false;
+    for (auto element : _file_workload) {
+      auto other_iter = other._file_workload.find(element.first);
+      if (other_iter == other._file_workload.end()) return false;
+      if (other_iter->second != element.second) return false;
+    }
+    if (_app_mapping.size() != other._app_mapping.size())
+       return false;
+    for (auto element : _app_mapping) {
+      auto other_iter = other._app_mapping.find(element.first);
+      if (other_iter == other._app_mapping.end()) return false;
+      if (other_iter->second != element.second) return false;
+    }
     return true;
   }
 };
@@ -174,6 +212,8 @@ inline void to_json(json& j, const WorkflowAdvice& p) {
   j["ts_distribution"] = p._ts_distribution;
   j["interfaces_used"] = p._interfaces_used;
   j["file_access_pattern"] = p._file_access_pattern;
+  j["file_workload"] = p._file_workload;
+  j["app_mapping"] = p._app_mapping;
   j["runtime_minutes"] = p._runtime_minutes;
 }
 
@@ -192,6 +232,8 @@ inline void from_json(const json& j, WorkflowAdvice& p) {
 
   j.at("interfaces_used").get_to(p._interfaces_used);
   j.at("file_access_pattern").get_to(p._file_access_pattern);
+  j.at("file_workload").get_to(p._file_workload);
+  j.at("app_mapping").get_to(p._app_mapping);
   j.at("runtime_minutes").get_to(p._runtime_minutes);
 }
 }  // namespace mimir
