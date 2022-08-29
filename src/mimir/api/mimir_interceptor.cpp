@@ -118,9 +118,9 @@ extern MimirStatus mimir_init_config() {
 
       mimir::global_app_config->_job_config._job_id = 0;
       mimir::global_app_config->_job_config._devices.emplace_back(SHM,
-                                                                  2 * 1024);
+                                                                  2 * 1024, false);
       mimir::global_app_config->_job_config._devices.emplace_back(PFS,
-                                                                  64 * 1024);
+                                                                  64 * 1024, true);
       mimir::global_app_config->_job_config._job_time_minutes = 30;
       mimir::global_app_config->_job_config._num_cores_per_node = 40;
       mimir::global_app_config->_job_config._num_gpus_per_node = 0;

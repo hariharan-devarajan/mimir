@@ -32,24 +32,28 @@ class ApplicationAdvice : public WorkflowAdvice {
 
   std::string _name;
   RankFileDAG _rank_file_dag;
+  bool _is_mpi;
 
   ApplicationAdvice()
       : WorkflowAdvice(AdviceType(PrimaryAdviceType::JOB_APPLICATION,
                                   OperationAdviceType::NO_OP)),
         _name(),
-        _rank_file_dag() {}
+        _rank_file_dag(), _is_mpi() {}
   ApplicationAdvice(const ApplicationAdvice& other)
       : WorkflowAdvice(other),
         _name(other._name),
-        _rank_file_dag(other._rank_file_dag) {}
+        _rank_file_dag(other._rank_file_dag),
+        _is_mpi(other._is_mpi){}
   ApplicationAdvice(const ApplicationAdvice&& other)
       : WorkflowAdvice(other),
         _name(other._name),
-        _rank_file_dag(other._rank_file_dag) {}
+        _rank_file_dag(other._rank_file_dag),
+        _is_mpi(other._is_mpi) {}
   ApplicationAdvice& operator=(const ApplicationAdvice& other) {
     WorkflowAdvice::operator=(other);
     this->_name = other._name;
     this->_rank_file_dag = other._rank_file_dag;
+    this->_is_mpi = other._is_mpi;
     return *this;
   }
   bool operator<(const ApplicationAdvice& other) const {
@@ -67,7 +71,8 @@ class ApplicationAdvice : public WorkflowAdvice {
   }
   bool is_same(const ApplicationAdvice& other) const {
     return WorkflowAdvice::is_same(other) && this->_name == other._name &&
-           this->_rank_file_dag == other._rank_file_dag;
+           this->_rank_file_dag == other._rank_file_dag &&
+           _is_mpi == other._is_mpi;
     ;
   }
 };
@@ -103,6 +108,7 @@ inline void to_json(json& j, const ApplicationAdvice& p) {
   j["runtime_minutes"] = p._runtime_minutes;
   j["name"] = p._name;
   j["rank_file_dag"] = p._rank_file_dag;
+  j["is_mpi"] = p._is_mpi;
 }
 
 inline void from_json(const json& j, ApplicationAdvice& p) {
@@ -121,6 +127,7 @@ inline void from_json(const json& j, ApplicationAdvice& p) {
   j.at("name").get_to(p._name);
   j.at("rank_file_dag").get_to(p._rank_file_dag);
   j.at("file_workload").get_to(p._file_workload);
+  j.at("is_mpi").get_to(p._is_mpi);
 }
 }  // namespace mimir
 #endif  // MIMIR_APPLICATION_ADVICE_H

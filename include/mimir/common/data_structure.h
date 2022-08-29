@@ -24,24 +24,29 @@ struct Storage {
   std::string _mount_point;
   uint32_t _capacity_mb;
   uint32_t _used_capacity_mb;
-  Storage() : _mount_point(), _capacity_mb(0), _used_capacity_mb(0) {}
+  bool _is_shared;
+  Storage() : _mount_point(), _capacity_mb(0), _used_capacity_mb(0), _is_shared() {}
 
-  Storage(std::string mount_point, uint32_t capacity_mb)
+  Storage(std::string mount_point, uint32_t capacity_mb, bool is_shared)
       : _mount_point(std::move(mount_point)),
         _capacity_mb(capacity_mb),
-        _used_capacity_mb(0) {}
+        _used_capacity_mb(0),
+        _is_shared(is_shared){}
   Storage(const Storage& other)
       : _mount_point(other._mount_point),
         _capacity_mb(other._capacity_mb),
-        _used_capacity_mb(other._used_capacity_mb) {}
+        _used_capacity_mb(other._used_capacity_mb),
+        _is_shared(other._is_shared){}
   Storage(const Storage&& other)
       : _mount_point(other._mount_point),
         _capacity_mb(other._capacity_mb),
-        _used_capacity_mb(other._used_capacity_mb) {}
+        _used_capacity_mb(other._used_capacity_mb),
+        _is_shared(other._is_shared) {}
   Storage& operator=(const Storage& other) {
     _mount_point = other._mount_point;
     _capacity_mb = other._capacity_mb;
     _used_capacity_mb = other._used_capacity_mb;
+    _is_shared = other._is_shared;
     return *this;
   }
   bool operator==(const Storage& other) const {
@@ -307,12 +312,14 @@ inline void to_json(json& j, const mimir::Storage& p) {
   j["mount_point"] = p._mount_point;
   j["capacity_mb"] = p._capacity_mb;
   j["used_capacity_mb"] = p._used_capacity_mb;
+  j["is_shared"] = p._is_shared;
 }
 
 inline void from_json(const json& j, mimir::Storage& p) {
   j.at("mount_point").get_to(p._mount_point);
   j.at("capacity_mb").get_to(p._capacity_mb);
   j.at("used_capacity_mb").get_to(p._used_capacity_mb);
+  j.at("is_shared").get_to(p._is_shared);
 }
 inline void to_json(json& j, const TransferSizeDistribution& p) {
   float a[5] = {p._0_4kb, p._4_64kb, p._64kb_1mb, p._1mb_16mb, p._1mb_16mb};
