@@ -102,7 +102,7 @@ extern MimirStatus mimir_init_config() {
           mimir::LOG_INFO, "Loading job configuration from config: end");
     } else {
       mimir::Logger::Instance("MIMIR")->log(
-          mimir::LOG_INFO, "Loading Default job configuration: start");
+          mimir::LOG_ERROR, "Loading Default job configuration: start");
       mimir::global_app_config = new mimir::Config();
       auto SHM = "/dev/shm";
       auto PFS = std::getenv("pfs");
