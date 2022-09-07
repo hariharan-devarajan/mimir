@@ -46,7 +46,7 @@ set(MIMIR_PUBLIC_INCLUDE ${CMAKE_CURRENT_SOURCE_DIR}/include/mimir/mimir.h
         ${CMAKE_CURRENT_SOURCE_DIR}/include/mimir/constant.h
         ${CMAKE_CURRENT_SOURCE_DIR}/include/mimir/mimir.h
         ${CMAKE_CURRENT_SOURCE_DIR}/include/mimir/typedef.h
-        ${CMAKE_CURRENT_SOURCE_DIR}/include/mimir/log/logger.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/mimir/macro.h
         ${CMAKE_CURRENT_SOURCE_DIR}/include/mimir/common/error_code.h
         ${CMAKE_CURRENT_SOURCE_DIR}/include/mimir/advice/middleware_advice.h
         ${CMAKE_CURRENT_SOURCE_DIR}/include/mimir/advice/file_operation_advice.h
@@ -60,7 +60,6 @@ set(MIMIR_PUBLIC_SRC
         ${CMAKE_CURRENT_SOURCE_DIR}/src/mimir/api/posix.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/src/mimir/api/application.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/src/mimir/api/workflow.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/mimir/log/logger.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/src/mimir/api/job_configuration.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/src/mimir/advice/advice.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/src/mimir/common/debug.cpp
@@ -245,6 +244,15 @@ if (ENABLE_ATHENA)
     add_library(athena SHARED ${ATHENA_LIBRARY_SRC})
     add_subdirectory(external/hcl)
     include_directories(external/hcl/include)
+endif ()
+
+find_package(cpp-logger REQUIRED)
+if (${CPP_LOGGER_FOUND})
+    message(STATUS "[CPP_LOGGER] found cpp-logger at ${CPP_LOGGER_INCLUDE_DIRS}")
+    include_directories(${CPP_LOGGER_INCLUDE_DIRS})
+    target_link_libraries(${PROJECT_NAME} ${CPP_LOGGER_LIBRARIES})
+else ()
+    message(FATAL_ERROR "-- [CPP_LOGGER] is needed for ${PROJECT_NAME} build")
 endif ()
 find_package(nlohmann_json 3.10.5 REQUIRED)
 

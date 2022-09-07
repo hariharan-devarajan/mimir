@@ -9,7 +9,7 @@
 #include <mimir/api/posix.h>
 #include <mimir/common/error_code.h>
 #include <mimir/constant.h>
-#include <mimir/log/logger.h>
+#include <mimir/macro.h>
 #include <mpi.h>
 
 MimirStatus file_prefetch(mimir::FileAdvice &advice) {}

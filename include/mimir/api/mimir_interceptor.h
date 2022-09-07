@@ -6,7 +6,7 @@
 #define MIMIR_MIMIR_INTERCEPTOR_H
 #include <mimir/advice/config.h>
 #include <mimir/common/error_code.h>
-#include <mimir/log/logger.h>
+#include <mimir/macro.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -40,13 +40,11 @@ class Tracker {
  public:
   std::atomic<int> local, remote;
   ~Tracker() {
-    mimir::Logger::Instance("MIMIR")->log(mimir::LOG_INFO,
-                                          "Destructing Tracker");
+    MIMIR_LOGINFO("Destructing Tracker","");
   }
   Tracker()
       : _track_fd(), _track_files(), _exclude_files(), local(0), remote(0) {
-    mimir::Logger::Instance("MIMIR")->log(mimir::LOG_INFO,
-                                          "Constructing Tracker");
+    MIMIR_LOGINFO("Constructing Tracker","");
   }
   void track(int fd) {
     if (!is_tracing()) return;
@@ -85,8 +83,7 @@ class Tracker {
     if (fd != -1 && !_track_fd.empty()) {
       auto iter = _track_fd.find(fd);
       if (iter != _track_fd.end()) {
-        mimir::Logger::Instance("MIMIR")->log(
-            mimir::LOG_INFO, "Tracking file descriptor %d", fd);
+        MIMIR_LOGINFO("Tracking file descriptor %d", fd);
         return true;
       }
     }
@@ -98,8 +95,7 @@ class Tracker {
     if (!_track_files.empty()) {
       auto iter = _track_files.find(path);
       if (iter != _track_files.end()) {
-        mimir::Logger::Instance("MIMIR")->log(mimir::LOG_INFO,
-                                              "Tracking file %s", path.c_str());
+        MIMIR_LOGINFO("Tracking file %s", path.c_str());
         return true;
       }
     }
@@ -111,8 +107,7 @@ class Tracker {
     if (!_exclude_files.empty()) {
       auto iter = _exclude_files.find(path);
       if (iter != _exclude_files.end()) {
-        mimir::Logger::Instance("MIMIR")->log(
-            mimir::LOG_INFO, "Excluding file %s", path.c_str());
+        MIMIR_LOGINFO("Excluding file %s", path.c_str());
         return true;
       }
     }

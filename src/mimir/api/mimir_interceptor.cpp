@@ -39,7 +39,7 @@ extern mimir::Tracker* MIMIR_TRACKER() { return mimir::tracker_instance; }
 extern mimir::Config* MIMIR_CONFIG() { return mimir::global_app_config; }
 
 inline std::vector<std::string> split_string(std::string x, char delim = ' ') {
-  mimir::Logger::Instance("MIMIR")->log(mimir::LOG_INFO, "split_string: start");
+  MIMIR_LOGINFO( "split_string: start","");
   x += delim;  // includes a delimiter at the end so last word is also read
   auto set_splitted = std::unordered_set<std::string>();
   std::string temp = "";
@@ -60,19 +60,16 @@ inline std::vector<std::string> split_string(std::string x, char delim = ' ') {
     }
     temp += x[i];
   }
-  mimir::Logger::Instance("MIMIR")->log(
-      mimir::LOG_INFO, "split_string with num_nodes %ld: end", splitted.size());
+  MIMIR_LOGINFO("split_string with num_nodes %ld: end", splitted.size());
   return splitted;
 }
 
 extern MimirStatus mimir_init_config(bool is_mpi) {
-  mimir::Logger::Instance("MIMIR")->log(mimir::LOG_INFO,
-                                        "Loading job configuration: start");
+  MIMIR_LOGINFO("Loading job configuration: start","");
   if (mimir::global_app_config == nullptr) {
     auto CONFIG = std::getenv(mimir::MIMIR_CONFIG_PATH);
     if (CONFIG != nullptr && fs::exists(CONFIG)) {
-      mimir::Logger::Instance("MIMIR")->log(
-          mimir::LOG_INFO, "Loading job configuration from config: start");
+      MIMIR_LOGINFO("Loading job configuration from config: start","");
       std::ifstream input(CONFIG);
       input.seekg(0, std::ios::end);
       size_t size = input.tellg();
@@ -102,20 +99,16 @@ extern MimirStatus mimir_init_config(bool is_mpi) {
         }
       }
       if(mimir::global_app_config->_current_process_index == -1){
-        mimir::Logger::Instance("MIMIR")->log(
-            mimir::LOG_ERROR, "app hash not matching");
+        MIMIR_LOGERROR("app hash not matching","");
       }
-      mimir::Logger::Instance("MIMIR")->log(
-          mimir::LOG_INFO, "Loading job configuration from config: end");
+      MIMIR_LOGINFO("Loading job configuration from config: end","");
     } else {
-      mimir::Logger::Instance("MIMIR")->log(
-          mimir::LOG_ERROR, "Loading Default job configuration: start");
+      MIMIR_LOGINFO("Loading Default job configuration: start","");
       mimir::global_app_config = new mimir::Config();
       auto SHM = "/dev/shm";
       auto PFS = std::getenv("pfs");
       if (PFS == nullptr) {
-        mimir::Logger::Instance("MIMIR")->log(
-            mimir::LOG_ERROR, "Environment variable pfs is not set.");
+        MIMIR_LOGERROR("Environment variable pfs is not set.","");
       }
       auto LSB_HOSTS = std::getenv("LSB_HOSTS");
       if (LSB_HOSTS == nullptr) {
@@ -136,27 +129,22 @@ extern MimirStatus mimir_init_config(bool is_mpi) {
       mimir::global_app_config->_job_config._rpc_port = 8888;
       mimir::global_app_config->_job_config._rpc_threads = 1;
       mimir::global_app_config->_job_config._priority = 100;
-      mimir::Logger::Instance("MIMIR")->log(
-          mimir::LOG_INFO, "Loading Default job configuration: end");
+      MIMIR_LOGINFO("Loading Default job configuration: end","");
     }
   }
-  mimir::Logger::Instance("MIMIR")->log(mimir::LOG_INFO,
-                                        "Loading job configuration: finished");
+  MIMIR_LOGINFO("Loading job configuration: finished","");
   return mimir::MIMIR_SUCCESS;
 }
 
 extern MimirStatus mimir_finalize_config() {
-  mimir::Logger::Instance("MIMIR")->log(mimir::LOG_INFO,
-                                        "mimir_finalize_config: start");
+  MIMIR_LOGINFO("mimir_finalize_config: start","");
   delete mimir::global_app_config;
-  mimir::Logger::Instance("MIMIR")->log(mimir::LOG_INFO,
-                                        "mimir_finalize_config: finished");
+  MIMIR_LOGINFO("mimir_finalize_config: finished","");
   return mimir::MIMIR_SUCCESS;
 }
 
 extern MimirStatus insert_loaded_intents() {
-  mimir::Logger::Instance("MIMIR")->log(mimir::LOG_INFO,
-                                        "insert_loaded_intents: start");
+  MIMIR_LOGINFO("insert_loaded_intents: start","");
   if (mimir::config_loaded_file && !mimir::intents_loaded &&
       mimir::global_app_config != nullptr) {
     size_t num_jobs = 1, num_workflow = 1,
@@ -183,12 +171,9 @@ extern MimirStatus insert_loaded_intents() {
     }
     mimir::intents_loaded = true;
   }
-  mimir::Logger::Instance("MIMIR")->log(mimir::LOG_INFO,
-                                        "insert_loaded_intents: end");
 }
 extern MimirStatus remove_loaded_intents() {
-  mimir::Logger::Instance("MIMIR")->log(mimir::LOG_INFO,
-                                        "remove_loaded_intents: start");
+  MIMIR_LOGINFO("remove_loaded_intents: start","");
   if (mimir::intents_loaded) {
     size_t num_jobs = 1, num_workflow = 1,
            num_apps = mimir::global_app_config->_app_repo.size(),
@@ -213,6 +198,5 @@ extern MimirStatus remove_loaded_intents() {
     free(mimir::handlers);
     mimir::intents_loaded = false;
   }
-  mimir::Logger::Instance("MIMIR")->log(mimir::LOG_INFO,
-                                        "remove_loaded_intents: end");
+  MIMIR_LOGINFO("remove_loaded_intents: end","");
 }

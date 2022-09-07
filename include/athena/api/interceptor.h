@@ -8,7 +8,7 @@
 #include <unistd.h>
 #include <unordered_set>
 #include <execinfo.h>
-#include "mimir/log/logger.h"
+#include <mimir/macro.h>
 #include <mimir/api/mimir_interceptor.h>
 #include "mimir/advice/job_configuration_advice.h"
 #include "mimir/api/job_configuration.h"
