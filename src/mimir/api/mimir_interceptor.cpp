@@ -8,6 +8,7 @@
 #include <mimir/api/posix.h>
 #include <mimir/api/workflow.h>
 #include <mimir/constant.h>
+#include <mpi.h>
 
 namespace mimir {
 bool is_mpi = false;
@@ -64,7 +65,7 @@ inline std::vector<std::string> split_string(std::string x, char delim = ' ') {
   return splitted;
 }
 
-extern MimirStatus mimir_init_config() {
+extern MimirStatus mimir_init_config(bool is_mpi) {
   mimir::Logger::Instance("MIMIR")->log(mimir::LOG_INFO,
                                         "Loading job configuration: start");
   if (mimir::global_app_config == nullptr) {
@@ -87,6 +88,12 @@ extern MimirStatus mimir_init_config() {
       std::string sp;
       std::ifstream("/proc/self/cmdline") >> sp;
       std::replace( sp.begin(), sp.end() - 1, '\000', ' ');
+      if (is_mpi) {
+        int rank, comm_size;
+        MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+        MPI_Comm_size(MPI_COMM_WORLD, &comm_size);
+        sp = std::to_string(comm_size) + " " + sp;
+      }
       mimir::global_app_config->_current_process_index = -1;
       for(auto element:mimir::global_app_config->_workflow._app_mapping) {
         if (strcmp(element.first.c_str(),sp.c_str()) == 0) {

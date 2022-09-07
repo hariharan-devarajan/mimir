@@ -123,7 +123,7 @@ class Tracker {
 
 extern mimir::Tracker* MIMIR_TRACKER();
 extern mimir::Config* MIMIR_CONFIG();
-extern MimirStatus mimir_init_config();
+extern MimirStatus mimir_init_config(bool is_mpi = false);
 extern MimirStatus mimir_finalize_config();
 
 extern MimirStatus insert_loaded_intents();
