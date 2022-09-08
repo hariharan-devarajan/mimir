@@ -10,7 +10,7 @@ enum AccessPattern { SEQUENTIAL = 0, STRIDED = 1, RANDOM = 2 };
 enum OperationType { DATA = 0, METADATA = 1 };
 enum DataRepresentation { DATA_BINARY = 0, DATA_ND_ARRAY = 1, DATA_IMAGE = 2 };
 enum Format { FORMAT_BINARY = 0, FORMAT_HDF5 = 1 };
-enum FileSharing { FILE_SHARING_NONE = 0, FILE_PER_PROCESS = 1, FILE_SHARED = 2 };
+enum FileSharing { FILE_SHARING_NONE = 0, FILE_PER_PROCESS = 1, FILE_SHARED_INTER_NODE = 2, FILE_SHARED_NODE_LOCAL = 3 };
 enum WorkloadType {
   WORKLOAD_NO_PATTERN = 0,
   WRITE_ONLY_WORKLOAD = 1,
