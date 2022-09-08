@@ -322,7 +322,7 @@ inline void from_json(const json& j, mimir::Storage& p) {
   j.at("is_shared").get_to(p._is_shared);
 }
 inline void to_json(json& j, const TransferSizeDistribution& p) {
-  float a[5] = {p._0_4kb, p._4_64kb, p._64kb_1mb, p._1mb_16mb, p._1mb_16mb};
+  float a[5] = {p._0_4kb, p._4_64kb, p._64kb_1mb, p._1mb_16mb, p._16mb};
   j = a;
 }
 
@@ -333,7 +333,7 @@ inline void from_json(const json& j, TransferSizeDistribution& p) {
   p._4_64kb = a[1];
   p._64kb_1mb = a[2];
   p._1mb_16mb = a[3];
-  p._1mb_16mb = a[4];
+  p._16mb = a[4];
 }
 inline void to_json(json& j, const mimir::Edge<Index, Index>& p) {
   uint32_t a[2] = {p.source, p.destination};
