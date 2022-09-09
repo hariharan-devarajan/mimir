@@ -103,33 +103,8 @@ extern MimirStatus mimir_init_config(bool is_mpi) {
       }
       MIMIR_LOGINFO("Loading job configuration from config: end","");
     } else {
-      MIMIR_LOGINFO("Loading Default job configuration: start","");
-      mimir::global_app_config = new mimir::Config();
-      auto SHM = "/dev/shm";
-      auto PFS = std::getenv("pfs");
-      if (PFS == nullptr) {
-        MIMIR_LOGERROR("Environment variable pfs is not set.","");
-      }
-      auto LSB_HOSTS = std::getenv("LSB_HOSTS");
-      if (LSB_HOSTS == nullptr) {
-        LSB_HOSTS = "localhost";
-      }
-      auto node_names = split_string(LSB_HOSTS);
-
-      mimir::global_app_config->_job_config._job_id = 0;
-      mimir::global_app_config->_job_config._devices.emplace_back(SHM,
-                                                                  2 * 1024, false);
-      mimir::global_app_config->_job_config._devices.emplace_back(PFS,
-                                                                  64 * 1024, true);
-      mimir::global_app_config->_job_config._job_time_minutes = 30;
-      mimir::global_app_config->_job_config._num_cores_per_node = 40;
-      mimir::global_app_config->_job_config._num_gpus_per_node = 0;
-      mimir::global_app_config->_job_config._num_nodes = node_names.size();
-      mimir::global_app_config->_job_config._node_names = node_names;
-      mimir::global_app_config->_job_config._rpc_port = 8888;
-      mimir::global_app_config->_job_config._rpc_threads = 1;
-      mimir::global_app_config->_job_config._priority = 100;
-      MIMIR_LOGINFO("Loading Default job configuration: end","");
+      MIMIR_LOGERROR("Environment variable %s not present or path "
+          "does not exist. Config not loaded.", mimir::MIMIR_CONFIG_PATH);
     }
   }
   MIMIR_LOGINFO("Loading job configuration: finished","");
