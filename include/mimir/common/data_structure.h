@@ -158,7 +158,7 @@ struct ApplicationFileDAG {
       if (iter == other.files.end()) return false;
     }
     if (edges.size() != other.edges.size()) return false;
-    for (int i = 0; i < edges.size(); ++i)
+    for (size_type i = 0; i < edges.size(); ++i)
       if (edges[i] != other.edges[i]) return false;
     return true;
   }
@@ -184,7 +184,7 @@ struct RankFileDAG {
     }
 
     if (edges.size() != other.edges.size()) return false;
-    for (int i = 0; i < edges.size(); ++i)
+    for (size_type i = 0; i < edges.size(); ++i)
       if (edges[i] != other.edges[i]) return false;
     return true;
   }
