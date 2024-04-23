@@ -155,7 +155,7 @@ endif ()
 # by other projects.
 #-----------------------------------------------------------------------------
 if (NOT MIMIR_EXPORTED_TARGETS)
-    set(MIMIR_EXPORTED_TARGETS "cpp-logger-targets")
+    set(MIMIR_EXPORTED_TARGETS "mimir-targets")
 endif ()
 
 set(MIMIR_LIBTYPE SHARED)
