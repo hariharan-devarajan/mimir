@@ -10,6 +10,7 @@
 #include <mimir/advice/advice_type.h>
 #include <stdint-gcc.h>
 
+#include <cstddef>
 #include <memory>
 #include <nlohmann/json.hpp>
 #include <string>
@@ -25,18 +26,19 @@ struct Storage {
   uint32_t _capacity_mb;
   uint32_t _used_capacity_mb;
   bool _is_shared;
-  Storage() : _mount_point(), _capacity_mb(0), _used_capacity_mb(0), _is_shared() {}
+  Storage()
+      : _mount_point(), _capacity_mb(0), _used_capacity_mb(0), _is_shared() {}
 
   Storage(std::string mount_point, uint32_t capacity_mb, bool is_shared)
       : _mount_point(std::move(mount_point)),
         _capacity_mb(capacity_mb),
         _used_capacity_mb(0),
-        _is_shared(is_shared){}
+        _is_shared(is_shared) {}
   Storage(const Storage& other)
       : _mount_point(other._mount_point),
         _capacity_mb(other._capacity_mb),
         _used_capacity_mb(other._used_capacity_mb),
-        _is_shared(other._is_shared){}
+        _is_shared(other._is_shared) {}
   Storage(const Storage&& other)
       : _mount_point(other._mount_point),
         _capacity_mb(other._capacity_mb),
@@ -158,7 +160,7 @@ struct ApplicationFileDAG {
       if (iter == other.files.end()) return false;
     }
     if (edges.size() != other.edges.size()) return false;
-    for (size_type i = 0; i < edges.size(); ++i)
+    for (size_t i = 0; i < edges.size(); ++i)
       if (edges[i] != other.edges[i]) return false;
     return true;
   }
@@ -184,7 +186,7 @@ struct RankFileDAG {
     }
 
     if (edges.size() != other.edges.size()) return false;
-    for (size_type i = 0; i < edges.size(); ++i)
+    for (size_t i = 0; i < edges.size(); ++i)
       if (edges[i] != other.edges[i]) return false;
     return true;
   }
